@@ -1,6 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910j";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910j";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910j";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910l";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910l";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910l";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260910l";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -66,17 +67,17 @@ async function boot() {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
             await Promise.all([
                 supabaseClient.from("guru").select("id, nama, mapel_utama, is_piket").order("nama"),
-                supabaseClient.from("kelas").select("id, nama_kelas").order("id"),
+                supabaseClient.from("kelas").select("id, nama_kelas, tingkat"),
                 supabaseClient.from("mapel").select("id, nama_mapel, rumpun_mapel").order("nama_mapel"),
                 supabaseClient.from("jam_pelajaran").select("*").order("jam_ke"),
             ]);
         state.guru = guru || [];
-        state.kelas = kelas || [];
+        state.kelas = urutkanKelas(kelas || []);
         state.mapel = mapel || [];
         state.jam = (jam || []).filter((j) => j.keterangan !== "Tahsin");
     } else {
         state.guru = demoData.guru;
-        state.kelas = demoData.kelas;
+        state.kelas = urutkanKelas(demoData.kelas);
         state.mapel = demoData.mapel;
         state.jam = demoData.jam.filter((j) => j.keterangan !== "Tahsin");
     }
@@ -162,6 +163,7 @@ function pendampingUntuk(jadwal) {
             return { guru_id: j.guru_id, hadir: !absen };
         });
 }
+const urutKelas = (id) => indeksKelas(state.kelas)(id);
 const namaKelas = (id) => state.kelas.find((k) => k.id === id)?.nama_kelas || id;
 const mapelById = (id) => state.mapel.find((m) => m.id === id);
 const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));

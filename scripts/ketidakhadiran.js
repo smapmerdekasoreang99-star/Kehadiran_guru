@@ -1,6 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910h";
-import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260910h";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910h";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910l";
+import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260910l";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910l";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260910l";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -8,6 +9,23 @@ try {
     initLockUI(() => renderTable());
 } catch (err) {
     console.error("Gagal memasang tombol kunci:", err);
+}
+
+// ---------- Pelaporan error ke layar ----------
+function laporError(konteks, error) {
+    console.error(konteks, error);
+    let box = document.getElementById("errorBanner");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "errorBanner";
+        box.className = "error-banner";
+        const main = document.querySelector("main");
+        main.insertBefore(box, main.firstChild);
+    }
+    const detail = error?.message || error?.details || String(error);
+    box.innerHTML = `<strong>${konteks}</strong><br>${detail}<button type="button" class="error-close" aria-label="Tutup">×</button>`;
+    box.querySelector(".error-close").addEventListener("click", () => box.remove());
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 const HARI_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
@@ -39,17 +57,17 @@ async function boot() {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
             await Promise.all([
                 supabaseClient.from("guru").select("id, nama").order("nama"),
-                supabaseClient.from("kelas").select("id, nama_kelas").order("id"),
+                supabaseClient.from("kelas").select("id, nama_kelas, tingkat"),
                 supabaseClient.from("mapel").select("id, nama_mapel").order("nama_mapel"),
                 supabaseClient.from("jam_pelajaran").select("*").order("jam_ke"),
             ]);
         state.guru = guru || [];
-        state.kelas = kelas || [];
+        state.kelas = urutkanKelas(kelas || []);
         state.mapel = mapel || [];
         state.jam = jam || [];
     } else {
         state.guru = demoData.guru;
-        state.kelas = demoData.kelas;
+        state.kelas = urutkanKelas(demoData.kelas);
         state.mapel = demoData.mapel;
         state.jam = demoData.jam;
     }
@@ -111,6 +129,7 @@ async function loadForDate() {
 }
 
 const namaGuru = (id) => state.guru.find((g) => g.id === id)?.nama || id;
+const urutKelas = (id) => indeksKelas(state.kelas)(id);
 const namaKelas = (id) => state.kelas.find((k) => k.id === id)?.nama_kelas || id;
 const namaMapel = (id) => state.mapel.find((m) => m.id === id)?.nama_mapel || id;
 const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));
@@ -127,7 +146,7 @@ const STATUS_LABEL = {
 const STATUS_PERLU_KETERANGAN = ["ST", "IT", "HTTM"];
 
 function baseRows() {
-    return [...state.jadwal].sort((a, b) => a.jam_ke - b.jam_ke || a.kelas_id.localeCompare(b.kelas_id));
+    return [...state.jadwal].sort((a, b) => a.jam_ke - b.jam_ke || urutKelas(a.kelas_id) - urutKelas(b.kelas_id));
 }
 
 function filteredRows() {
@@ -256,9 +275,12 @@ async function saveCatatan(e) {
     }));
 
     if (isSupabaseConfigured) {
-        await supabaseClient
+        {
+            const { error } = await supabaseClient
             .from("ketidakhadiran_guru")
             .upsert(payloads, { onConflict: "jadwal_id,tanggal" });
+            if (error) { laporError("Gagal menyimpan ke tabel ketidakhadiran_guru", error); return; }
+        }
     } else {
         for (const payload of payloads) {
             const idx = demoKetidakhadiran.findIndex(
@@ -275,11 +297,14 @@ async function saveCatatan(e) {
 
 async function clearCatatan(jadwalId) {
     if (isSupabaseConfigured) {
-        await supabaseClient
+        {
+            const { error } = await supabaseClient
             .from("ketidakhadiran_guru")
             .delete()
             .eq("jadwal_id", jadwalId)
             .eq("tanggal", state.tanggal);
+            if (error) { laporError("Gagal menghapus ke tabel ketidakhadiran_guru", error); return; }
+        }
     } else {
         const idx = demoKetidakhadiran.findIndex(
             (k) => k.jadwal_id === jadwalId && k.tanggal === state.tanggal
