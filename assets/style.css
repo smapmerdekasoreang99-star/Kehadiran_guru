@@ -706,3 +706,8 @@ textarea {
     line-height: 1;
     cursor: pointer;
 }
+
+/* ---------- Jadwal: baris tab hari ---------- */
+.toolbar-days { padding-top: 12px; padding-bottom: 12px; background: #FCFAF3; }
+.day-tabs.dimmed button { opacity: 0.45; }
+.hari-cell { font-weight: 600; color: var(--ink); white-space: nowrap; }
