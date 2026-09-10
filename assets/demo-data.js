@@ -238,75 +238,198 @@ export const demoData = {
   "kelas": [
     {
       "id": "X-1",
-      "nama_kelas": "X-1"
+      "nama_kelas": "X-1",
+      "tingkat": 10
     },
     {
       "id": "X-2",
-      "nama_kelas": "X-2"
+      "nama_kelas": "X-2",
+      "tingkat": 10
     },
     {
       "id": "X-3",
-      "nama_kelas": "X-3"
+      "nama_kelas": "X-3",
+      "tingkat": 10
     },
     {
       "id": "X-4",
-      "nama_kelas": "X-4"
+      "nama_kelas": "X-4",
+      "tingkat": 10
     },
     {
       "id": "X-5",
-      "nama_kelas": "X-5"
+      "nama_kelas": "X-5",
+      "tingkat": 10
     },
     {
       "id": "X-6",
-      "nama_kelas": "X-6"
+      "nama_kelas": "X-6",
+      "tingkat": 10
     },
     {
       "id": "XI-1",
-      "nama_kelas": "XI-1"
+      "nama_kelas": "XI-1",
+      "tingkat": 11
     },
     {
       "id": "XI-2",
-      "nama_kelas": "XI-2"
+      "nama_kelas": "XI-2",
+      "tingkat": 11
     },
     {
       "id": "XI-3",
-      "nama_kelas": "XI-3"
+      "nama_kelas": "XI-3",
+      "tingkat": 11
     },
     {
       "id": "XI-4",
-      "nama_kelas": "XI-4"
+      "nama_kelas": "XI-4",
+      "tingkat": 11
     },
     {
       "id": "XI-5",
-      "nama_kelas": "XI-5"
+      "nama_kelas": "XI-5",
+      "tingkat": 11
     },
     {
       "id": "XI-6",
-      "nama_kelas": "XI-6"
+      "nama_kelas": "XI-6",
+      "tingkat": 11
     },
     {
       "id": "XII-1",
-      "nama_kelas": "XII-1"
+      "nama_kelas": "XII-1",
+      "tingkat": 12
     },
     {
       "id": "XII-2",
-      "nama_kelas": "XII-2"
+      "nama_kelas": "XII-2",
+      "tingkat": 12
     },
     {
       "id": "XII-3",
-      "nama_kelas": "XII-3"
+      "nama_kelas": "XII-3",
+      "tingkat": 12
     },
     {
       "id": "XII-4",
-      "nama_kelas": "XII-4"
+      "nama_kelas": "XII-4",
+      "tingkat": 12
     },
     {
       "id": "XII-5",
-      "nama_kelas": "XII-5"
+      "nama_kelas": "XII-5",
+      "tingkat": 12
     },
     {
       "id": "XII-6",
-      "nama_kelas": "XII-6"
+      "nama_kelas": "XII-6",
+      "tingkat": 12
+    },
+    {
+      "id": "TH-MH1",
+      "nama_kelas": "Tahsin · Mahir 1",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-MH2",
+      "nama_kelas": "Tahsin · Mahir 2",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-MH3",
+      "nama_kelas": "Tahsin · Mahir 3",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT1",
+      "nama_kelas": "Tahsin · Pratahsin 1",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT2",
+      "nama_kelas": "Tahsin · Pratahsin 2",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT3",
+      "nama_kelas": "Tahsin · Pratahsin 3",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT4",
+      "nama_kelas": "Tahsin · Pratahsin 4",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT5",
+      "nama_kelas": "Tahsin · Pratahsin 5",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT6",
+      "nama_kelas": "Tahsin · Pratahsin 6",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT7",
+      "nama_kelas": "Tahsin · Pratahsin 7",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT8",
+      "nama_kelas": "Tahsin · Pratahsin 8",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-PT9",
+      "nama_kelas": "Tahsin · Pratahsin 9",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL1",
+      "nama_kelas": "Tahsin · Qolqolah 1",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL2",
+      "nama_kelas": "Tahsin · Qolqolah 2",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL3",
+      "nama_kelas": "Tahsin · Qolqolah 3",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL4",
+      "nama_kelas": "Tahsin · Qolqolah 4",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL5",
+      "nama_kelas": "Tahsin · Qolqolah 5",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-QL6",
+      "nama_kelas": "Tahsin · Qolqolah 6",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-HR1",
+      "nama_kelas": "Tahsin · Harokat 1",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-HR2",
+      "nama_kelas": "Tahsin · Harokat 2",
+      "tingkat": 0
+    },
+    {
+      "id": "TH-HR3",
+      "nama_kelas": "Tahsin · Harokat 3",
+      "tingkat": 0
     }
   ],
   "mapel": [
@@ -433,6 +556,11 @@ export const demoData = {
     {
       "id": "M25",
       "nama_mapel": "Upacara",
+      "rumpun_mapel": "Kegiatan Sekolah"
+    },
+    {
+      "id": "M26",
+      "nama_mapel": "Tahsin",
       "rumpun_mapel": "Kegiatan Sekolah"
     }
   ],
