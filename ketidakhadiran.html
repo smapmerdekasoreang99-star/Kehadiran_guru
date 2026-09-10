@@ -6,7 +6,7 @@
 <title>Ketidakhadiran Guru — Guru Pengganti SMA Plus Merdeka Soreang</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20260910b" />
+<link rel="stylesheet" href="assets/style.css?v=20260910c" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -46,7 +46,7 @@
 
     <div id="notice" class="notice" hidden>
       Mode pratinjau — belum terhubung ke Supabase. Menampilkan data contoh (jadwal Senin, kelas X-1 &amp; X-2).
-      Tandai ketidakhadiran akan tersimpan sementara di halaman ini saja.
+      Catatan ketidakhadiran akan tersimpan sementara di halaman ini saja.
     </div>
 
     <div id="weekendNotice" class="weekend-notice" hidden>
@@ -80,21 +80,19 @@
     <p id="modalSubjudul" style="margin:-10px 0 18px;color:#6E6455;font-size:13.5px;"></p>
     <form id="ketidakhadiranForm">
       <div class="field">
-        <label for="fAlasan">Alasan</label>
-        <select id="fAlasan" required>
-          <option value="Sakit">Sakit</option>
-          <option value="Ijin">Ijin</option>
-          <option value="Alfa">Alfa</option>
+        <label for="fStatus">Status</label>
+        <select id="fStatus" required>
+          <option value="ST">ST — Sakit dengan Tugas</option>
+          <option value="STT">STT — Sakit tanpa Tugas</option>
+          <option value="IT">IT — Ijin dengan Tugas</option>
+          <option value="ITT">ITT — Ijin tanpa Tugas</option>
+          <option value="TK">TK — Tanpa Keterangan</option>
+          <option value="HTTM">HTTM — Hadir tanpa Tatap Muka</option>
         </select>
       </div>
 
-      <div class="field" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="fAdaTugas" style="width:auto;" />
-        <label for="fAdaTugas" style="margin:0;">Guru memberi tugas untuk siswa</label>
-      </div>
-
       <div class="field" id="keteranganField">
-        <label for="fKeteranganTugas">Keterangan tugas</label>
+        <label for="fKeteranganTugas">Keterangan (tugas untuk siswa, dsb.)</label>
         <textarea id="fKeteranganTugas" placeholder="Contoh: kerjakan LKPD hal. 12–14, dikumpulkan pekan depan"></textarea>
       </div>
 
@@ -125,6 +123,6 @@
   </div>
 </div>
 
-<script type="module" src="scripts/ketidakhadiran.js?v=20260910b"></script>
+<script type="module" src="scripts/ketidakhadiran.js?v=20260910c"></script>
 </body>
 </html>
