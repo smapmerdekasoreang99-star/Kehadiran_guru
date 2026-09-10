@@ -1,12 +1,36 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910b";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910b";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910b";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910f";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910f";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910f";
+
+// Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
+// walaupun ada bagian lain halaman yang gagal dimuat.
+try {
+    initLockUI(() => renderTable());
+} catch (err) {
+    console.error("Gagal memasang tombol kunci:", err);
+}
 
 const HARI_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
 const HARI_FROM_JS_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
+const STATUS_LABEL = {
+    ST: "Sakit dengan Tugas",
+    STT: "Sakit tanpa Tugas",
+    IT: "Ijin dengan Tugas",
+    ITT: "Ijin tanpa Tugas",
+    TK: "Tanpa Keterangan",
+    HTTM: "Hadir tanpa Tatap Muka",
+};
+
+// Tanggal hari ini (waktu lokal) dalam format YYYY-MM-DD
+function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 let state = {
-    tanggal: "2026-09-14",
+    // Terhubung Supabase: hari ini. Mode pratinjau: Senin contoh agar data contoh muncul.
+    tanggal: isSupabaseConfigured ? todayISO() : "2026-09-14",
     hari: "Senin",
     jadwal: [],
     ketidakhadiran: [],
@@ -20,7 +44,6 @@ let state = {
 
 async function boot() {
     document.getElementById("notice").hidden = isSupabaseConfigured;
-    initLockUI(() => renderTable());
 
     if (isSupabaseConfigured) {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
@@ -111,7 +134,17 @@ async function loadForDate() {
     renderTable();
 }
 
-const namaGuru = (id) => state.guru.find((g) => g.id === id)?.nama || id;
+const namaGuru = (id) => (id ? state.guru.find((g) => g.id === id)?.nama || id : "—");
+
+// Guru lain yang mengajar di kelas & jam yang sama (team teaching, mis. Matematika Dasar)
+function pendampingUntuk(jadwal) {
+    return state.jadwal
+        .filter((j) => j.id !== jadwal.id && j.hari === jadwal.hari && j.jam_ke === jadwal.jam_ke && j.kelas_id === jadwal.kelas_id)
+        .map((j) => {
+            const absen = state.ketidakhadiran.find((k) => k.jadwal_id === j.id);
+            return { guru_id: j.guru_id, hadir: !absen };
+        });
+}
 const namaKelas = (id) => state.kelas.find((k) => k.id === id)?.nama_kelas || id;
 const mapelById = (id) => state.mapel.find((m) => m.id === id);
 const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));
@@ -122,9 +155,10 @@ function renderTable() {
     const unlocked = isUnlocked();
     const disabledAttr = unlocked ? "" : "disabled";
 
+    // Jam ke-8 (Tahsin) tidak memerlukan guru pengganti — kewenangan bagian Kesiswaan
     const rows = state.ketidakhadiran
         .map((k) => ({ k, jadwal: state.jadwal.find((j) => j.id === k.jadwal_id) }))
-        .filter((r) => r.jadwal)
+        .filter((r) => r.jadwal && r.jadwal.jam_ke !== 8)
         .sort((a, b) => a.jadwal.jam_ke - b.jadwal.jam_ke);
 
     if (rows.length === 0) {
@@ -141,9 +175,16 @@ function renderTable() {
             const mapel = mapelById(jadwal.mapel_id);
             const penugasan = state.penugasan.find((p) => p.ketidakhadiran_id === k.id);
 
+            const pendamping = pendampingUntuk(jadwal);
+            const pendampingNote = pendamping.length
+                ? `<span class="partner-note">${pendamping
+                      .map((p) => `Berpasangan dengan ${namaGuru(p.guru_id)} — ${p.hadir ? "hadir" : "juga tidak hadir"}`)
+                      .join("<br>")}</span>`
+                : "";
+
             const statusCell = penugasan
                 ? `<span class="badge-tugas badge-${penugasan.status_pengganti.toLowerCase()}">${penugasan.status_pengganti}</span>
-                   <span class="tugas-note">${namaGuru(penugasan.guru_pengganti_id)}</span>`
+                   <span class="tugas-note">${penugasan.status_pengganti === "TP" ? "Tidak perlu pengganti" : namaGuru(penugasan.guru_pengganti_id)}</span>`
                 : `<span class="badge-tugas badge-kosong">Belum ditugaskan</span>`;
 
             const actionCell = penugasan
@@ -151,7 +192,10 @@ function renderTable() {
                      <button class="btn-danger-text" ${disabledAttr} data-action="edit" data-kid="${k.id}">Ubah</button>
                      <button class="btn-danger-text" ${disabledAttr} data-action="clear" data-kid="${k.id}">Batalkan</button>
                    </div>`
-                : `<button class="btn-mark" ${disabledAttr} data-action="assign" data-kid="${k.id}">Tugaskan</button>`;
+                : `<div class="row-actions">
+                     <button class="btn-mark" ${disabledAttr} data-action="assign" data-kid="${k.id}">Tugaskan</button>
+                     <button class="btn-danger-text" ${disabledAttr} data-action="tp" data-kid="${k.id}">Tidak perlu</button>
+                   </div>`;
 
             return `
         <tr>
@@ -163,7 +207,8 @@ function renderTable() {
           <td>${mapel?.nama_mapel || jadwal.mapel_id}</td>
           <td>
             ${namaGuru(jadwal.guru_id)}
-            <span class="tugas-note">${k.alasan}${k.ada_tugas ? " · ada tugas" : ""}</span>
+            <span class="tugas-note">${k.status} — ${STATUS_LABEL[k.status] || ""}</span>
+            ${pendampingNote}
           </td>
           <td>${statusCell}</td>
           <td>${actionCell}</td>
@@ -178,6 +223,14 @@ function renderTable() {
     );
     tbody.querySelectorAll('[data-action="clear"]').forEach((b) =>
         b.addEventListener("click", () => clearPenugasan(b.dataset.kid))
+    );
+    tbody.querySelectorAll('[data-action="tp"]').forEach((b) =>
+        b.addEventListener("click", () => simpanPenugasan({
+            ketidakhadiran_id: b.dataset.kid,
+            guru_pengganti_id: null,
+            status_pengganti: "TP",
+            catatan: null,
+        }))
     );
 }
 
@@ -259,15 +312,22 @@ function openModal(ketidakhadiranId) {
     const existing = state.penugasan.find((p) => p.ketidakhadiran_id === ketidakhadiranId);
 
     document.getElementById("modalSubjudul").textContent =
-        `${namaGuru(jadwal.guru_id)} (${k.alasan}) — ${mapel?.nama_mapel || ""} — ${namaKelas(jadwal.kelas_id)}, Jam ke-${jadwal.jam_ke}`;
+        `${namaGuru(jadwal.guru_id)} (${k.status}) — ${mapel?.nama_mapel || ""} — ${namaKelas(jadwal.kelas_id)}, Jam ke-${jadwal.jam_ke}`;
 
     renderRecommendations(jadwal, mapel);
 
-    document.getElementById("fGuruPengganti").value = existing ? existing.guru_pengganti_id : state.guru[0]?.id;
+    document.getElementById("fGuruPengganti").value = existing?.guru_pengganti_id || state.guru[0]?.id;
     document.getElementById("fStatus").value = existing ? existing.status_pengganti : "GT";
     document.getElementById("fCatatan").value = existing ? existing.catatan || "" : "";
+    toggleGuruField();
 
     document.getElementById("penugasanModal").hidden = false;
+}
+
+function toggleGuruField() {
+    const tp = document.getElementById("fStatus").value === "TP";
+    document.getElementById("fGuruPengganti").disabled = tp;
+    document.getElementById("guruField").classList.toggle("field-muted", tp);
 }
 
 function closeModal() {
@@ -277,24 +337,27 @@ function closeModal() {
 
 async function savePenugasan(e) {
     e.preventDefault();
-    const payload = {
+    const status = document.getElementById("fStatus").value;
+    await simpanPenugasan({
         ketidakhadiran_id: activeKetidakhadiranId,
-        guru_pengganti_id: document.getElementById("fGuruPengganti").value,
-        status_pengganti: document.getElementById("fStatus").value,
+        guru_pengganti_id: status === "TP" ? null : document.getElementById("fGuruPengganti").value,
+        status_pengganti: status,
         catatan: document.getElementById("fCatatan").value || null,
-    };
+    });
+    closeModal();
+}
 
+async function simpanPenugasan(payload) {
+    const kid = payload.ketidakhadiran_id;
     if (isSupabaseConfigured) {
         await supabaseClient
             .from("penugasan_pengganti")
             .upsert(payload, { onConflict: "ketidakhadiran_id" });
     } else {
-        const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === activeKetidakhadiranId);
+        const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === kid);
         if (idx > -1) demoPenugasan[idx] = { ...demoPenugasan[idx], ...payload };
         else demoPenugasan.push({ id: `P${Date.now()}`, ...payload });
     }
-
-    closeModal();
     await loadForDate();
 }
 
@@ -311,7 +374,13 @@ async function clearPenugasan(ketidakhadiranId) {
     await loadForDate();
 }
 
-document.getElementById("modalCancel").addEventListener("click", closeModal);
-document.getElementById("penugasanForm").addEventListener("submit", savePenugasan);
+// ---------- Pasang kontrol statis, lalu muat data ----------
+try {
+    document.getElementById("modalCancel").addEventListener("click", closeModal);
+    document.getElementById("penugasanForm").addEventListener("submit", savePenugasan);
+    document.getElementById("fStatus").addEventListener("change", toggleGuruField);
+} catch (err) {
+    console.error("Ada elemen halaman yang tidak ditemukan — kemungkinan HTML dan JS beda versi. Lakukan hard refresh (Ctrl+Shift+R).", err);
+}
 
-boot();
+boot().catch((err) => console.error("Gagal memuat data halaman:", err));
