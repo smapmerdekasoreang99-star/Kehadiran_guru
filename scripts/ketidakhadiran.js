@@ -1,12 +1,27 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910b";
-import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260910b";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910b";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910f";
+import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260910f";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910f";
+
+// Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
+// walaupun ada bagian lain halaman yang gagal dimuat.
+try {
+    initLockUI(() => renderTable());
+} catch (err) {
+    console.error("Gagal memasang tombol kunci:", err);
+}
 
 const HARI_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
 const HARI_FROM_JS_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
+// Tanggal hari ini (waktu lokal) dalam format YYYY-MM-DD
+function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 let state = {
-    tanggal: "2026-09-14",
+    // Terhubung Supabase: hari ini. Mode pratinjau: Senin contoh agar data contoh muncul.
+    tanggal: isSupabaseConfigured ? todayISO() : "2026-09-14",
     hari: "Senin",
     jadwal: [],
     ketidakhadiran: [],
@@ -18,7 +33,6 @@ let state = {
 
 async function boot() {
     document.getElementById("notice").hidden = isSupabaseConfigured;
-    initLockUI(() => renderTable());
 
     if (isSupabaseConfigured) {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
@@ -31,12 +45,12 @@ async function boot() {
         state.guru = guru || [];
         state.kelas = kelas || [];
         state.mapel = mapel || [];
-        state.jam = (jam || []).filter((j) => j.keterangan !== "Tahsin");
+        state.jam = jam || [];
     } else {
         state.guru = demoData.guru;
         state.kelas = demoData.kelas;
         state.mapel = demoData.mapel;
-        state.jam = demoData.jam.filter((j) => j.keterangan !== "Tahsin");
+        state.jam = demoData.jam;
     }
 
     const tanggalInput = document.getElementById("tanggalPicker");
@@ -97,7 +111,15 @@ const namaMapel = (id) => state.mapel.find((m) => m.id === id)?.nama_mapel || id
 const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));
 const catatanUntuk = (jadwalId) => state.ketidakhadiran.find((k) => k.jadwal_id === jadwalId);
 
-const ALASAN_LABEL = { Sakit: "Sakit", Ijin: "Ijin", Alfa: "Alfa" };
+const STATUS_LABEL = {
+    ST: "Sakit dengan Tugas",
+    STT: "Sakit tanpa Tugas",
+    IT: "Ijin dengan Tugas",
+    ITT: "Ijin tanpa Tugas",
+    TK: "Tanpa Keterangan",
+    HTTM: "Hadir tanpa Tatap Muka",
+};
+const STATUS_PERLU_KETERANGAN = ["ST", "IT", "HTTM"];
 
 function renderTable() {
     const tbody = document.getElementById("body");
@@ -112,8 +134,8 @@ function renderTable() {
             const catatan = catatanUntuk(r.id);
 
             const statusCell = catatan
-                ? `<span class="badge-status badge-${catatan.alasan.toLowerCase()}">${ALASAN_LABEL[catatan.alasan]}</span>
-                   <span class="tugas-note">${catatan.ada_tugas ? "Ada tugas" : "Tanpa tugas"}</span>`
+                ? `<span class="badge-status badge-${catatan.status.toLowerCase()}">${catatan.status}</span>
+                   <span class="tugas-note">${STATUS_LABEL[catatan.status] || ""}</span>`
                 : `<span class="badge-status badge-hadir">Hadir</span>`;
 
             const actionCell = catatan
@@ -159,8 +181,7 @@ function openModal(jadwalId) {
     document.getElementById("modalSubjudul").textContent =
         `${namaGuru(row.guru_id)} — ${namaMapel(row.mapel_id)} — ${namaKelas(row.kelas_id)}, Jam ke-${row.jam_ke}`;
 
-    document.getElementById("fAlasan").value = catatan ? catatan.alasan : "Sakit";
-    document.getElementById("fAdaTugas").checked = catatan ? catatan.ada_tugas : false;
+    document.getElementById("fStatus").value = catatan ? catatan.status : "ST";
     document.getElementById("fKeteranganTugas").value = catatan ? catatan.keterangan_tugas || "" : "";
     toggleKeteranganField();
 
@@ -173,10 +194,9 @@ function closeModal() {
 }
 
 function toggleKeteranganField() {
-    const adaTugas = document.getElementById("fAdaTugas").checked;
-    document.getElementById("keteranganField").hidden = !adaTugas;
+    const status = document.getElementById("fStatus").value;
+    document.getElementById("keteranganField").hidden = !STATUS_PERLU_KETERANGAN.includes(status);
 }
-document.getElementById("fAdaTugas").addEventListener("change", toggleKeteranganField);
 
 async function saveCatatan(e) {
     e.preventDefault();
@@ -185,8 +205,7 @@ async function saveCatatan(e) {
         jadwal_id: activeJadwalId,
         tanggal: state.tanggal,
         guru_id: row.guru_id,
-        alasan: document.getElementById("fAlasan").value,
-        ada_tugas: document.getElementById("fAdaTugas").checked,
+        status: document.getElementById("fStatus").value,
         keterangan_tugas: document.getElementById("fKeteranganTugas").value || null,
     };
 
@@ -222,7 +241,13 @@ async function clearCatatan(jadwalId) {
     await loadForDate();
 }
 
-document.getElementById("modalCancel").addEventListener("click", closeModal);
-document.getElementById("ketidakhadiranForm").addEventListener("submit", saveCatatan);
+// ---------- Pasang kontrol statis, lalu muat data ----------
+try {
+    document.getElementById("modalCancel").addEventListener("click", closeModal);
+    document.getElementById("ketidakhadiranForm").addEventListener("submit", saveCatatan);
+    document.getElementById("fStatus").addEventListener("change", toggleKeteranganField);
+} catch (err) {
+    console.error("Ada elemen halaman yang tidak ditemukan — kemungkinan HTML dan JS beda versi. Lakukan hard refresh (Ctrl+Shift+R).", err);
+}
 
-boot();
+boot().catch((err) => console.error("Gagal memuat data halaman:", err));
