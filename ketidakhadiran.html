@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ketidakhadiran Guru — Guru Pengganti SMA Plus Merdeka Soreang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=20260910b" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="assets/logo.png" alt="Lambang SMA Plus Merdeka Soreang" />
+      <div class="name">SMA Plus<br/>Merdeka Soreang</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="index.html">Beranda</a>
+      <a href="jadwal.html">Jadwal KBM</a>
+      <a href="ketidakhadiran.html" class="active">Ketidakhadiran Guru</a>
+      <a href="penugasan.html">Penugasan Pengganti</a>
+    </nav>
+
+    <div class="sidebar-foot">Sistem Guru Pengganti<br/>Tahun Ajaran 2026/2027</div>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <div>
+        <h1>Ketidakhadiran Guru</h1>
+        <p>Pilih tanggal, lalu tandai guru yang tidak hadir pada jam pelajarannya.</p>
+      </div>
+      <div class="page-head-actions">
+        <div class="date-field">
+          <label for="tanggalPicker">Tanggal</label>
+          <input type="date" id="tanggalPicker" />
+          <span class="hari-badge">Hari: <span id="hariLabel">—</span></span>
+        </div>
+        <button id="lockToggle" class="btn-lock">🔒 Buka Kunci Edit</button>
+      </div>
+    </div>
+
+    <div id="notice" class="notice" hidden>
+      Mode pratinjau — belum terhubung ke Supabase. Menampilkan data contoh (jadwal Senin, kelas X-1 &amp; X-2).
+      Tandai ketidakhadiran akan tersimpan sementara di halaman ini saja.
+    </div>
+
+    <div id="weekendNotice" class="weekend-notice" hidden>
+      Tidak ada jadwal KBM pada hari ini (Sabtu/Minggu). Pilih tanggal hari kerja (Senin–Jumat).
+    </div>
+
+    <div id="mainCard" class="card">
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Jam</th>
+            <th>Kelas</th>
+            <th>Mata Pelajaran</th>
+            <th>Guru</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="body"></tbody>
+      </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: tandai / ubah ketidakhadiran -->
+<div id="ketidakhadiranModal" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2>Catat Ketidakhadiran</h2>
+    <p id="modalSubjudul" style="margin:-10px 0 18px;color:#6E6455;font-size:13.5px;"></p>
+    <form id="ketidakhadiranForm">
+      <div class="field">
+        <label for="fAlasan">Alasan</label>
+        <select id="fAlasan" required>
+          <option value="Sakit">Sakit</option>
+          <option value="Ijin">Ijin</option>
+          <option value="Alfa">Alfa</option>
+        </select>
+      </div>
+
+      <div class="field" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="fAdaTugas" style="width:auto;" />
+        <label for="fAdaTugas" style="margin:0;">Guru memberi tugas untuk siswa</label>
+      </div>
+
+      <div class="field" id="keteranganField">
+        <label for="fKeteranganTugas">Keterangan tugas</label>
+        <textarea id="fKeteranganTugas" placeholder="Contoh: kerjakan LKPD hal. 12–14, dikumpulkan pekan depan"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="modalCancel" class="btn btn-ghost">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: PIN (satu kali per sesi browser) -->
+<div id="pinModal" class="modal-backdrop" hidden>
+  <div class="modal" style="max-width:360px;">
+    <h2>Buka Kunci Edit</h2>
+    <p style="margin:-8px 0 16px;color:#6E6455;font-size:13.5px;">Masukkan PIN untuk mengaktifkan tambah/ubah/hapus di seluruh halaman selama sesi ini.</p>
+    <form id="pinForm">
+      <div class="field">
+        <label for="pinInput">PIN</label>
+        <input type="password" id="pinInput" inputmode="text" autocomplete="off" required />
+        <p id="pinError" hidden style="color:#A8432E;font-size:12.5px;margin:6px 0 0;">PIN salah, coba lagi.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="pinCancel" class="btn btn-ghost">Batal</button>
+        <button type="submit" class="btn btn-primary">Konfirmasi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="scripts/ketidakhadiran.js?v=20260910b"></script>
+</body>
+</html>

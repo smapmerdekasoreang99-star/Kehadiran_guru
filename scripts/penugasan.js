@@ -1,0 +1,317 @@
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910b";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910b";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910b";
+
+const HARI_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+const HARI_FROM_JS_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+let state = {
+    tanggal: "2026-09-14",
+    hari: "Senin",
+    jadwal: [],
+    ketidakhadiran: [],
+    penugasan: [],
+    guru: [],
+    kelas: [],
+    mapel: [],
+    jam: [],
+    piket: [],
+};
+
+async function boot() {
+    document.getElementById("notice").hidden = isSupabaseConfigured;
+    initLockUI(() => renderTable());
+
+    if (isSupabaseConfigured) {
+        const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
+            await Promise.all([
+                supabaseClient.from("guru").select("id, nama, mapel_utama, is_piket").order("nama"),
+                supabaseClient.from("kelas").select("id, nama_kelas").order("id"),
+                supabaseClient.from("mapel").select("id, nama_mapel, rumpun_mapel").order("nama_mapel"),
+                supabaseClient.from("jam_pelajaran").select("*").order("jam_ke"),
+            ]);
+        state.guru = guru || [];
+        state.kelas = kelas || [];
+        state.mapel = mapel || [];
+        state.jam = (jam || []).filter((j) => j.keterangan !== "Tahsin");
+    } else {
+        state.guru = demoData.guru;
+        state.kelas = demoData.kelas;
+        state.mapel = demoData.mapel;
+        state.jam = demoData.jam.filter((j) => j.keterangan !== "Tahsin");
+    }
+
+    document.getElementById("fGuruPengganti").innerHTML = state.guru
+        .map((g) => `<option value="${g.id}">${g.nama}</option>`)
+        .join("");
+
+    const tanggalInput = document.getElementById("tanggalPicker");
+    tanggalInput.value = state.tanggal;
+    tanggalInput.addEventListener("change", async (e) => {
+        state.tanggal = e.target.value;
+        await loadForDate();
+    });
+
+    await loadForDate();
+}
+
+function hariFromTanggal(tanggalStr) {
+    const d = new Date(tanggalStr + "T00:00:00");
+    return HARI_FROM_JS_DAY[d.getDay()];
+}
+
+async function loadForDate() {
+    state.hari = hariFromTanggal(state.tanggal);
+    document.getElementById("hariLabel").textContent = state.hari;
+
+    const weekendNotice = document.getElementById("weekendNotice");
+    const card = document.getElementById("mainCard");
+
+    if (!HARI_LIST.includes(state.hari)) {
+        weekendNotice.hidden = false;
+        card.hidden = true;
+        return;
+    }
+    weekendNotice.hidden = true;
+    card.hidden = false;
+
+    if (isSupabaseConfigured) {
+        const [{ data: jadwal }, { data: ketidakhadiran }, { data: piket }] = await Promise.all([
+            supabaseClient
+                .from("jadwal_kbm")
+                .select("id, hari, jam_ke, kelas_id, mapel_id, guru_id")
+                .eq("hari", state.hari)
+                .order("jam_ke"),
+            supabaseClient
+                .from("ketidakhadiran_guru")
+                .select("*")
+                .eq("tanggal", state.tanggal),
+            supabaseClient.from("piket").select("*").eq("hari", state.hari),
+        ]);
+        state.jadwal = jadwal || [];
+        state.ketidakhadiran = ketidakhadiran || [];
+        state.piket = piket || [];
+
+        const ketidakhadiranIds = state.ketidakhadiran.map((k) => k.id);
+        const { data: penugasan } = ketidakhadiranIds.length
+            ? await supabaseClient
+                  .from("penugasan_pengganti")
+                  .select("*")
+                  .in("ketidakhadiran_id", ketidakhadiranIds)
+            : { data: [] };
+        state.penugasan = penugasan || [];
+    } else {
+        state.jadwal = demoData.jadwal.filter((r) => r.hari === state.hari);
+        state.ketidakhadiran = demoKetidakhadiran.filter((r) => r.tanggal === state.tanggal);
+        state.piket = demoData.piket.filter((p) => p.hari === state.hari);
+        const ketidakhadiranIds = state.ketidakhadiran.map((k) => k.id);
+        state.penugasan = demoPenugasan.filter((p) => ketidakhadiranIds.includes(p.ketidakhadiran_id));
+    }
+
+    renderTable();
+}
+
+const namaGuru = (id) => state.guru.find((g) => g.id === id)?.nama || id;
+const namaKelas = (id) => state.kelas.find((k) => k.id === id)?.nama_kelas || id;
+const mapelById = (id) => state.mapel.find((m) => m.id === id);
+const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));
+
+function renderTable() {
+    const tbody = document.getElementById("body");
+    const empty = document.getElementById("emptyState");
+    const unlocked = isUnlocked();
+    const disabledAttr = unlocked ? "" : "disabled";
+
+    const rows = state.ketidakhadiran
+        .map((k) => ({ k, jadwal: state.jadwal.find((j) => j.id === k.jadwal_id) }))
+        .filter((r) => r.jadwal)
+        .sort((a, b) => a.jadwal.jam_ke - b.jadwal.jam_ke);
+
+    if (rows.length === 0) {
+        tbody.innerHTML = "";
+        empty.hidden = false;
+        return;
+    }
+    empty.hidden = true;
+
+    tbody.innerHTML = rows
+        .map(({ k, jadwal }) => {
+            const jam = jamInfo(jadwal.jam_ke);
+            const waktu = jam ? `${jam.mulai}–${jam.selesai}` : "";
+            const mapel = mapelById(jadwal.mapel_id);
+            const penugasan = state.penugasan.find((p) => p.ketidakhadiran_id === k.id);
+
+            const statusCell = penugasan
+                ? `<span class="badge-tugas badge-${penugasan.status_pengganti.toLowerCase()}">${penugasan.status_pengganti}</span>
+                   <span class="tugas-note">${namaGuru(penugasan.guru_pengganti_id)}</span>`
+                : `<span class="badge-tugas badge-kosong">Belum ditugaskan</span>`;
+
+            const actionCell = penugasan
+                ? `<div class="row-actions">
+                     <button class="btn-danger-text" ${disabledAttr} data-action="edit" data-kid="${k.id}">Ubah</button>
+                     <button class="btn-danger-text" ${disabledAttr} data-action="clear" data-kid="${k.id}">Batalkan</button>
+                   </div>`
+                : `<button class="btn-mark" ${disabledAttr} data-action="assign" data-kid="${k.id}">Tugaskan</button>`;
+
+            return `
+        <tr>
+          <td class="jam-cell">
+            <span class="jam-ke">Jam ke-${jadwal.jam_ke}</span>
+            <span class="jam-waktu">${waktu}</span>
+          </td>
+          <td><span class="badge-kelas">${namaKelas(jadwal.kelas_id)}</span></td>
+          <td>${mapel?.nama_mapel || jadwal.mapel_id}</td>
+          <td>
+            ${namaGuru(jadwal.guru_id)}
+            <span class="tugas-note">${k.alasan}${k.ada_tugas ? " · ada tugas" : ""}</span>
+          </td>
+          <td>${statusCell}</td>
+          <td>${actionCell}</td>
+        </tr>`;
+        })
+        .join("");
+
+    if (!unlocked) return;
+
+    tbody.querySelectorAll('[data-action="assign"], [data-action="edit"]').forEach((b) =>
+        b.addEventListener("click", () => openModal(b.dataset.kid))
+    );
+    tbody.querySelectorAll('[data-action="clear"]').forEach((b) =>
+        b.addEventListener("click", () => clearPenugasan(b.dataset.kid))
+    );
+}
+
+// ---------- Rekomendasi ----------
+function computeRecommendations(jadwal, mapel) {
+    const busyGuruIds = new Set(
+        state.jadwal.filter((j) => j.jam_ke === jadwal.jam_ke).map((j) => j.guru_id)
+    );
+
+    const piketJamIni = state.piket
+        .filter((p) => p.jam_ke === jadwal.jam_ke)
+        .map((p) => p.guru_id)
+        .filter((id) => !busyGuruIds.has(id));
+
+    const infaler = state.guru
+        .filter(
+            (g) =>
+                g.mapel_utama &&
+                mapel &&
+                g.mapel_utama === mapel.nama_mapel &&
+                g.id !== jadwal.guru_id &&
+                !busyGuruIds.has(g.id)
+        )
+        .map((g) => g.id);
+
+    const serumpun = state.guru
+        .filter(
+            (g) =>
+                mapel &&
+                mapel.rumpun_mapel &&
+                mapel.rumpun_mapel !== "Kegiatan Sekolah" &&
+                g.mapel_utama &&
+                state.mapel.find((m) => m.nama_mapel === g.mapel_utama)?.rumpun_mapel === mapel.rumpun_mapel &&
+                !busyGuruIds.has(g.id) &&
+                !piketJamIni.includes(g.id) &&
+                !infaler.includes(g.id) &&
+                g.id !== jadwal.guru_id
+        )
+        .map((g) => g.id);
+
+    return { piket: piketJamIni, infaler, serumpun };
+}
+
+function renderRecommendations(jadwal, mapel) {
+    const { piket, infaler, serumpun } = computeRecommendations(jadwal, mapel);
+    const wrap = document.getElementById("rekomendasi");
+
+    const chip = (guruId, status, label) =>
+        `<button type="button" class="chip chip-${status.toLowerCase()}" data-guru="${guruId}" data-status="${status}">
+           ${namaGuru(guruId)} <span class="chip-tag">${label}</span>
+         </button>`;
+
+    const groups = [
+        piket.map((id) => chip(id, "PT", "Piket")),
+        infaler.map((id) => chip(id, "Inf", "Infaler")),
+        serumpun.slice(0, 5).map((id) => chip(id, "GT", "Serumpun")),
+    ].flat();
+
+    wrap.innerHTML = groups.length
+        ? groups.join("")
+        : `<span class="tugas-note">Tidak ada rekomendasi otomatis untuk jam ini — pilih manual di bawah.</span>`;
+
+    wrap.querySelectorAll(".chip").forEach((c) =>
+        c.addEventListener("click", () => {
+            document.getElementById("fGuruPengganti").value = c.dataset.guru;
+            document.getElementById("fStatus").value = c.dataset.status;
+        })
+    );
+}
+
+// ---------- Modal ----------
+let activeKetidakhadiranId = null;
+
+function openModal(ketidakhadiranId) {
+    activeKetidakhadiranId = ketidakhadiranId;
+    const k = state.ketidakhadiran.find((r) => r.id === ketidakhadiranId);
+    const jadwal = state.jadwal.find((j) => j.id === k.jadwal_id);
+    const mapel = mapelById(jadwal.mapel_id);
+    const existing = state.penugasan.find((p) => p.ketidakhadiran_id === ketidakhadiranId);
+
+    document.getElementById("modalSubjudul").textContent =
+        `${namaGuru(jadwal.guru_id)} (${k.alasan}) — ${mapel?.nama_mapel || ""} — ${namaKelas(jadwal.kelas_id)}, Jam ke-${jadwal.jam_ke}`;
+
+    renderRecommendations(jadwal, mapel);
+
+    document.getElementById("fGuruPengganti").value = existing ? existing.guru_pengganti_id : state.guru[0]?.id;
+    document.getElementById("fStatus").value = existing ? existing.status_pengganti : "GT";
+    document.getElementById("fCatatan").value = existing ? existing.catatan || "" : "";
+
+    document.getElementById("penugasanModal").hidden = false;
+}
+
+function closeModal() {
+    document.getElementById("penugasanModal").hidden = true;
+    activeKetidakhadiranId = null;
+}
+
+async function savePenugasan(e) {
+    e.preventDefault();
+    const payload = {
+        ketidakhadiran_id: activeKetidakhadiranId,
+        guru_pengganti_id: document.getElementById("fGuruPengganti").value,
+        status_pengganti: document.getElementById("fStatus").value,
+        catatan: document.getElementById("fCatatan").value || null,
+    };
+
+    if (isSupabaseConfigured) {
+        await supabaseClient
+            .from("penugasan_pengganti")
+            .upsert(payload, { onConflict: "ketidakhadiran_id" });
+    } else {
+        const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === activeKetidakhadiranId);
+        if (idx > -1) demoPenugasan[idx] = { ...demoPenugasan[idx], ...payload };
+        else demoPenugasan.push({ id: `P${Date.now()}`, ...payload });
+    }
+
+    closeModal();
+    await loadForDate();
+}
+
+async function clearPenugasan(ketidakhadiranId) {
+    if (isSupabaseConfigured) {
+        await supabaseClient
+            .from("penugasan_pengganti")
+            .delete()
+            .eq("ketidakhadiran_id", ketidakhadiranId);
+    } else {
+        const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === ketidakhadiranId);
+        if (idx > -1) demoPenugasan.splice(idx, 1);
+    }
+    await loadForDate();
+}
+
+document.getElementById("modalCancel").addEventListener("click", closeModal);
+document.getElementById("penugasanForm").addEventListener("submit", savePenugasan);
+
+boot();

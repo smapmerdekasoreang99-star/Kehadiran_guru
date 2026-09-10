@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jadwal KBM — Guru Pengganti SMA Plus Merdeka Soreang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=20260910b" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="assets/logo.png" alt="Lambang SMA Plus Merdeka Soreang" />
+      <div class="name">SMA Plus<br/>Merdeka Soreang</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="index.html">Beranda</a>
+      <a href="jadwal.html" class="active">Jadwal KBM</a>
+      <a href="ketidakhadiran.html">Ketidakhadiran Guru</a>
+      <a href="penugasan.html">Penugasan Pengganti</a>
+    </nav>
+
+    <div class="sidebar-foot">Sistem Guru Pengganti<br/>Tahun Ajaran 2026/2027</div>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <div>
+        <h1>Jadwal Kegiatan Belajar Mengajar</h1>
+        <p>Kelola jadwal KBM per hari — tambah, ubah, atau hapus jam pelajaran.</p>
+      </div>
+      <button id="lockToggle" class="btn-lock">🔒 Buka Kunci Edit</button>
+    </div>
+
+    <div id="notice" class="notice" hidden>
+      Mode pratinjau — belum terhubung ke Supabase. Menampilkan data contoh (jadwal Senin, kelas X-1 &amp; X-2).
+      Isi kredensial di <code>assets/supabase-client.js</code> untuk memakai data sesungguhnya.
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div id="dayTabs" class="day-tabs"></div>
+        <div class="toolbar-actions">
+          <select id="kelasFilter" class="kelas-filter"></select>
+          <button id="addBtn" class="btn btn-primary">+ Tambah Jadwal</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Jam</th>
+            <th>Kelas</th>
+            <th>Mata Pelajaran</th>
+            <th>Guru</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="jadwalBody"></tbody>
+      </table>
+      </div>
+
+      <div id="emptyState" class="empty-state" hidden>
+        Belum ada jadwal untuk hari dan kelas ini. Klik "Tambah Jadwal" untuk menambahkan.
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: tambah / ubah -->
+<div id="jadwalModal" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h2 id="modalTitle">Tambah Jadwal</h2>
+    <form id="jadwalForm">
+      <div class="field">
+        <label for="fHari">Hari</label>
+        <select id="fHari" required></select>
+      </div>
+      <div class="field">
+        <label for="fJam">Jam ke</label>
+        <select id="fJam" required></select>
+      </div>
+      <div class="field">
+        <label for="fKelas">Kelas</label>
+        <select id="fKelas" required></select>
+      </div>
+      <div class="field">
+        <label for="fMapel">Mata Pelajaran</label>
+        <select id="fMapel" required></select>
+      </div>
+      <div class="field">
+        <label for="fGuru">Guru</label>
+        <select id="fGuru" required></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="modalCancel" class="btn btn-ghost">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: konfirmasi hapus -->
+<div id="confirmModal" class="modal-backdrop" hidden>
+  <div class="modal confirm-box">
+    <h2>Hapus jadwal ini?</h2>
+    <p>Tindakan ini tidak bisa dibatalkan.</p>
+    <div class="modal-actions">
+      <button type="button" id="confirmCancel" class="btn btn-ghost">Batal</button>
+      <button type="button" id="confirmDelete" class="btn btn-primary" style="background:#A8432E;color:#fff;">Hapus</button>
+    </div>
+  </div>
+</div>
+<!-- Modal: PIN (satu kali per sesi browser) -->
+<div id="pinModal" class="modal-backdrop" hidden>
+  <div class="modal" style="max-width:360px;">
+    <h2>Buka Kunci Edit</h2>
+    <p style="margin:-8px 0 16px;color:#6E6455;font-size:13.5px;">Masukkan PIN untuk mengaktifkan tambah/ubah/hapus di seluruh halaman selama sesi ini.</p>
+    <form id="pinForm">
+      <div class="field">
+        <label for="pinInput">PIN</label>
+        <input type="password" id="pinInput" inputmode="text" autocomplete="off" required />
+        <p id="pinError" hidden style="color:#A8432E;font-size:12.5px;margin:6px 0 0;">PIN salah, coba lagi.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="pinCancel" class="btn btn-ghost">Batal</button>
+        <button type="submit" class="btn btn-primary">Konfirmasi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="scripts/jadwal.js?v=20260910b"></script>
+</body>
+</html>
