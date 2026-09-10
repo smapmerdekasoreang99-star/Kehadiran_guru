@@ -1,6 +1,6 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910f";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910f";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910f";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910j";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910j";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910j";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -8,6 +8,23 @@ try {
     initLockUI(() => renderTable());
 } catch (err) {
     console.error("Gagal memasang tombol kunci:", err);
+}
+
+// ---------- Pelaporan error ke layar ----------
+function laporError(konteks, error) {
+    console.error(konteks, error);
+    let box = document.getElementById("errorBanner");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "errorBanner";
+        box.className = "error-banner";
+        const main = document.querySelector("main");
+        main.insertBefore(box, main.firstChild);
+    }
+    const detail = error?.message || error?.details || String(error);
+    box.innerHTML = `<strong>${konteks}</strong><br>${detail}<button type="button" class="error-close" aria-label="Tutup">×</button>`;
+    box.querySelector(".error-close").addEventListener("click", () => box.remove());
+    box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 const HARI_LIST = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
@@ -305,6 +322,14 @@ function renderRecommendations(jadwal, mapel) {
 let activeKetidakhadiranId = null;
 
 function openModal(ketidakhadiranId) {
+    try {
+        bukaFormPenugasan(ketidakhadiranId);
+    } catch (err) {
+        laporError("Gagal membuka form penugasan (kemungkinan penugasan.html masih versi lama — unggah ulang & hard refresh)", err);
+    }
+}
+
+function bukaFormPenugasan(ketidakhadiranId) {
     activeKetidakhadiranId = ketidakhadiranId;
     const k = state.ketidakhadiran.find((r) => r.id === ketidakhadiranId);
     const jadwal = state.jadwal.find((j) => j.id === k.jadwal_id);
@@ -327,7 +352,7 @@ function openModal(ketidakhadiranId) {
 function toggleGuruField() {
     const tp = document.getElementById("fStatus").value === "TP";
     document.getElementById("fGuruPengganti").disabled = tp;
-    document.getElementById("guruField").classList.toggle("field-muted", tp);
+    document.getElementById("guruField")?.classList.toggle("field-muted", tp);
 }
 
 function closeModal() {
@@ -350,9 +375,12 @@ async function savePenugasan(e) {
 async function simpanPenugasan(payload) {
     const kid = payload.ketidakhadiran_id;
     if (isSupabaseConfigured) {
-        await supabaseClient
+        {
+            const { error } = await supabaseClient
             .from("penugasan_pengganti")
             .upsert(payload, { onConflict: "ketidakhadiran_id" });
+            if (error) { laporError("Gagal menyimpan ke tabel penugasan_pengganti", error); return; }
+        }
     } else {
         const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === kid);
         if (idx > -1) demoPenugasan[idx] = { ...demoPenugasan[idx], ...payload };
@@ -363,10 +391,13 @@ async function simpanPenugasan(payload) {
 
 async function clearPenugasan(ketidakhadiranId) {
     if (isSupabaseConfigured) {
-        await supabaseClient
+        {
+            const { error } = await supabaseClient
             .from("penugasan_pengganti")
             .delete()
             .eq("ketidakhadiran_id", ketidakhadiranId);
+            if (error) { laporError("Gagal menghapus ke tabel penugasan_pengganti", error); return; }
+        }
     } else {
         const idx = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === ketidakhadiranId);
         if (idx > -1) demoPenugasan.splice(idx, 1);
