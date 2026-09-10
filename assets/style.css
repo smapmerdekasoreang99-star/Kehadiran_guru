@@ -681,3 +681,28 @@ textarea {
     color: var(--ink-muted);
     background: #FAF6EA;
 }
+
+/* ---------- Pesan error dari server ---------- */
+.error-banner {
+    position: relative;
+    background: var(--flame-tint);
+    border: 1px solid var(--flame);
+    color: #6E2415;
+    padding: 12px 44px 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    word-break: break-word;
+}
+.error-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    color: var(--flame);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
