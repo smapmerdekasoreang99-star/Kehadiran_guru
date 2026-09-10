@@ -172,8 +172,10 @@ main {
     border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow-card);
-    overflow: hidden;
+    /* overflow sengaja tidak disembunyikan: daftar saran pencarian harus bisa keluar dari kartu */
 }
+.card > :first-child { border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
+.card > :last-child  { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
 
 .toolbar {
     display: flex;
@@ -240,7 +242,7 @@ select.kelas-filter {
 .btn-danger-text:hover { text-decoration: underline; }
 
 /* ---------- Table ---------- */
-.table-scroll { overflow-x: auto; }
+.table-scroll { overflow-x: auto; overflow-y: hidden; }
 
 table { width: 100%; border-collapse: collapse; min-width: 640px; }
 
@@ -295,9 +297,10 @@ tbody tr:hover td { background: #FCFAF3; }
 }
 
 .badge-hadir { background: #E7F1E3; color: #3F6B33; }
-.badge-sakit { background: var(--gold-tint); color: #6B4E10; }
-.badge-ijin  { background: #E4EAF2; color: #3B5578; }
-.badge-alfa  { background: var(--flame-tint); color: var(--flame); }
+.badge-st, .badge-stt   { background: var(--gold-tint); color: #6B4E10; }   /* Sakit */
+.badge-it, .badge-itt   { background: #E4EAF2; color: #3B5578; }            /* Ijin */
+.badge-tk               { background: var(--flame-tint); color: var(--flame); } /* Tanpa Keterangan */
+.badge-httm             { background: #ECE8E0; color: #5B5346; }            /* Hadir tanpa Tatap Muka */
 
 .tugas-note {
     display: block;
@@ -375,7 +378,20 @@ textarea {
 .badge-gt { background: #E4EAF2; color: #3B5578; }
 .badge-pt { background: var(--gold-tint); color: #6B4E10; }
 .badge-inf { background: #E7F1E3; color: #3F6B33; }
+.badge-tp { background: #ECE8E0; color: #5B5346; }
 .badge-kosong { background: var(--flame-tint); color: var(--flame); font-weight: 600; }
+
+.partner-note {
+    display: block;
+    font-size: 11.5px;
+    color: #6B4E10;
+    background: var(--gold-tint);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.field-muted { opacity: 0.45; }
 
 .rekomendasi-wrap {
     display: flex;
@@ -538,4 +554,130 @@ textarea {
     .sidebar { flex-direction: row; align-items: center; padding: 14px 16px; gap: 16px; }
     .sidebar-nav, .sidebar-foot { display: none; }
     main { padding: 20px; }
+}
+
+/* ---------- Pencarian guru (halaman Ketidakhadiran) ---------- */
+.toolbar { position: relative; z-index: 5; }
+
+.search-box {
+    position: relative;
+    flex: 1 1 280px;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--ink-muted);
+    pointer-events: none;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 10px 36px 10px 38px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14.5px;
+}
+.search-box input::placeholder { color: #A39A88; }
+.search-box input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 154, 46, 0.18);
+    background: var(--surface);
+}
+.search-box input::-webkit-search-cancel-button { display: none; }
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 999px;
+    background: var(--line);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+.search-clear:hover { background: var(--gold-tint); }
+
+.search-suggest {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(43, 38, 32, 0.14);
+    max-height: 340px;
+    overflow-y: auto;
+    z-index: 30;
+}
+
+.suggest-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:hover { background: var(--gold-tint); }
+.suggest-nama { font-size: 14px; }
+.suggest-nama mark { background: transparent; color: var(--gold-deep); font-weight: 700; }
+.suggest-meta { font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
+.suggest-meta em { font-style: normal; color: var(--flame); font-weight: 600; }
+.suggest-empty { padding: 12px 14px; font-size: 13px; color: var(--ink-muted); }
+
+.chip-filter {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.chip-filter:hover { border-color: var(--flame); color: var(--flame); }
+.chip-filter.active {
+    background: var(--flame-tint);
+    border-color: var(--flame);
+    color: var(--flame);
+}
+
+.guru-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    background: var(--gold-tint);
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+}
+.guru-banner-nama { font-family: "Fraunces", serif; font-size: 17px; font-weight: 600; color: var(--ink); }
+.guru-banner-info { font-size: 13px; color: #6B4E10; margin-top: 2px; }
+
+.table-foot {
+    padding: 10px 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    background: #FAF6EA;
 }
