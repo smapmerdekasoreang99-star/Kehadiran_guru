@@ -6,7 +6,7 @@
 <title>Penugasan Pengganti — Guru Pengganti SMA Plus Merdeka Soreang</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20260910l" />
+<link rel="stylesheet" href="assets/style.css?v=20260912c" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -40,6 +40,7 @@
           <input type="date" id="tanggalPicker" />
           <span class="hari-badge">Hari: <span id="hariLabel">—</span></span>
         </div>
+        <button type="button" id="bagikanBtn" class="btn btn-ghost">📤 Bagikan ke WA</button>
         <button id="lockToggle" class="btn-lock">🔒 Buka Kunci Edit</button>
       </div>
     </div>
@@ -111,6 +112,31 @@
   </div>
 </div>
 
+<!-- Modal: bagikan ke WhatsApp -->
+<div id="bagikanModal" class="modal-backdrop" hidden>
+  <div class="modal modal-lebar">
+    <h2>Bagikan Jadwal Guru Pengganti</h2>
+    <p id="bagikanInfo" class="bagikan-info"></p>
+    <div class="field">
+      <label for="fCatatanWA">Catatan untuk grup (opsional)</label>
+      <input type="text" id="fCatatanWA" placeholder="Contoh: PT piket keliling dulu" />
+    </div>
+    <div class="pratinjau-wrap"><canvas id="pratinjauCanvas"></canvas></div>
+    <div class="bagikan-aksi">
+      <button type="button" id="waBagikanGambar" class="btn btn-primary bagikan-utama">📤 Bagikan gambar ke WhatsApp…</button>
+    </div>
+    <div class="bagikan-aksi bagikan-sekunder">
+      <button type="button" id="waUnduh" class="btn btn-ghost">Unduh gambar</button>
+      <button type="button" id="waSalinTeks" class="btn btn-ghost">Salin teks</button>
+      <button type="button" id="waBukaTeks" class="btn btn-ghost">Buka WhatsApp (teks)</button>
+    </div>
+    <p id="bagikanCatatan" class="bagikan-info" hidden></p>
+    <div class="modal-actions">
+      <button type="button" id="bagikanTutup" class="btn btn-ghost">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: PIN (satu kali per sesi browser) -->
 <div id="pinModal" class="modal-backdrop" hidden>
   <div class="modal" style="max-width:360px;">
@@ -130,6 +156,6 @@
   </div>
 </div>
 
-<script type="module" src="scripts/penugasan.js?v=20260910l"></script>
+<script type="module" src="scripts/penugasan.js?v=20260912c"></script>
 </body>
 </html>
