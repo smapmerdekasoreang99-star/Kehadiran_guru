@@ -1,7 +1,8 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910l";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260910l";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910l";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260910l";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912c";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912c";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912c";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912c";
+import { susunKelompok, buatTeks, gambarTabel, tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912c";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -407,11 +408,119 @@ async function clearPenugasan(ketidakhadiranId) {
     await loadForDate();
 }
 
+// ---------- Bagikan ke WhatsApp ----------
+const NAMA_SEKOLAH = "SMA Plus Merdeka Soreang";
+let waCache = { teks: "", canvas: null };
+
+function dataBagikan() {
+    // hanya jam yang sudah ditugaskan (GT/PT/Inf); TP & jam 8 dikecualikan
+    const items = []; let belum = 0;
+    for (const k of state.ketidakhadiran) {
+        const j = state.jadwal.find((x) => x.id === k.jadwal_id);
+        if (!j || j.jam_ke === 8) continue;
+        const p = state.penugasan.find((x) => x.ketidakhadiran_id === k.id);
+        if (!p) { belum++; continue; }
+        if (p.status_pengganti === "TP") continue;
+        items.push({ guru_id: j.guru_id, status: k.status, jam_ke: j.jam_ke, kelas_id: j.kelas_id, pengganti_id: p.guru_pengganti_id, status_pengganti: p.status_pengganti });
+    }
+    const lookup = { namaGuru, namaKelas, labelStatus: (kode) => STATUS_LABEL[kode] || kode };
+    return { kelompok: susunKelompok(items, lookup), belum, jumlah: items.length };
+}
+
+let logoImg = null;
+function muatLogo() {
+    return new Promise((res) => {
+        if (logoImg) return res(logoImg);
+        const img = new Image();
+        img.onload = () => { logoImg = img; res(img); };
+        img.onerror = () => res(null);
+        img.src = "assets/logo.png";
+    });
+}
+
+async function renderBagikan() {
+    const { kelompok, belum, jumlah } = dataBagikan();
+    const catatan = document.getElementById("fCatatanWA").value;
+    const info = document.getElementById("bagikanInfo");
+    if (jumlah === 0) {
+        info.textContent = "Belum ada penugasan (GT/PT/Inf) pada tanggal ini yang bisa dibagikan.";
+        info.classList.add("peringatan");
+    } else {
+        info.textContent = `${jumlah} jam pelajaran, ${kelompok.length} guru tidak hadir · ${tanggalPanjang(state.tanggal)}` +
+            (belum ? ` · ${belum} jam belum ditugaskan (tidak ikut dibagikan)` : "");
+        info.classList.toggle("peringatan", belum > 0);
+    }
+    waCache.teks = buatTeks({ tanggal: state.tanggal, kelompok, catatan, namaSekolah: NAMA_SEKOLAH });
+
+    const logo = await muatLogo();
+    const off = gambarTabel({ tanggal: state.tanggal, kelompok, catatan, namaSekolah: NAMA_SEKOLAH, logo,
+        createCanvas: (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; } });
+    const view = document.getElementById("pratinjauCanvas");
+    view.width = off.width; view.height = off.height;
+    view.getContext("2d").drawImage(off, 0, 0);
+    waCache.canvas = off;
+
+    document.getElementById("bagikanCatatan").hidden = true;
+}
+
+async function unduhGambar() {
+    const blob = await canvasKeBlob(waCache.canvas);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = namaBerkas(); a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function catatanBagikan(teks) {
+    const el = document.getElementById("bagikanCatatan");
+    el.textContent = teks; el.hidden = false;
+}
+
+function namaBerkas() { return `jadwal-guru-pengganti-${state.tanggal}.png`; }
+
+function canvasKeBlob(canvas) {
+    return new Promise((res) => canvas.toBlob((b) => res(b), "image/png"));
+}
+
+function pasangBagikan() {
+    const modal = document.getElementById("bagikanModal");
+    document.getElementById("bagikanBtn").addEventListener("click", async () => {
+        modal.hidden = false;
+        await renderBagikan();
+    });
+    document.getElementById("bagikanTutup").addEventListener("click", () => (modal.hidden = true));
+    let timer = null;
+    document.getElementById("fCatatanWA").addEventListener("input", () => {
+        clearTimeout(timer); timer = setTimeout(renderBagikan, 250);
+    });
+    document.getElementById("waSalinTeks").addEventListener("click", async (e) => {
+        try { await navigator.clipboard.writeText(waCache.teks); e.target.textContent = "Teks tersalin ✓"; setTimeout(() => (e.target.textContent = "Salin teks"), 1800); }
+        catch (err) { laporError("Gagal menyalin teks", err); }
+    });
+    document.getElementById("waBukaTeks").addEventListener("click", () => {
+        window.open("https://wa.me/?text=" + encodeURIComponent(waCache.teks), "_blank");
+    });
+    document.getElementById("waUnduh").addEventListener("click", unduhGambar);
+    document.getElementById("waBagikanGambar").addEventListener("click", async () => {
+        try {
+            const blob = await canvasKeBlob(waCache.canvas);
+            const file = new File([blob], namaBerkas(), { type: "image/png" });
+            const bisa = typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+            if (bisa) {
+                await navigator.share({ files: [file], title: "Jadwal Guru Pengganti" });
+            } else {
+                await unduhGambar();
+                catatanBagikan("Browser ini belum bisa membagikan gambar langsung, jadi gambarnya diunduh. Lampirkan file tersebut di grup WhatsApp (di HP, tombol ini biasanya langsung membuka WhatsApp).");
+            }
+        } catch (err) { if (err?.name !== "AbortError") laporError("Gagal membagikan gambar", err); }
+    });
+}
+
 // ---------- Pasang kontrol statis, lalu muat data ----------
 try {
     document.getElementById("modalCancel").addEventListener("click", closeModal);
     document.getElementById("penugasanForm").addEventListener("submit", savePenugasan);
     document.getElementById("fStatus").addEventListener("change", toggleGuruField);
+    pasangBagikan();
 } catch (err) {
     console.error("Ada elemen halaman yang tidak ditemukan — kemungkinan HTML dan JS beda versi. Lakukan hard refresh (Ctrl+Shift+R).", err);
 }

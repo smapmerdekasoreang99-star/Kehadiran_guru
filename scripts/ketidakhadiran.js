@@ -1,7 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910l";
-import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260910l";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910l";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260910l";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912c";
+import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260912c";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912c";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912c";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -245,6 +245,17 @@ function openModal(jadwalId) {
         ? `${namaGuru(first.guru_id)} — ${namaMapel(first.mapel_id)} — ${namaKelas(first.kelas_id)}, Jam ke-${first.jam_ke}`
         : `${namaGuru(first.guru_id)} — ${activeJadwalIds.length} jam pelajaran hari ${state.hari} (semua akan diberi status yang sama)`;
 
+    const jamGuruHariIni = baseRows().filter((r) => r.guru_id === first.guru_id);
+    const catatanPertama = activeJadwalIds.length === 1 && !catatan &&
+        jamGuruHariIni.every((r) => !catatanUntuk(r.id)) && jamGuruHariIni.length > 1;
+    const fieldSemua = document.getElementById("terapkanSemuaField");
+    fieldSemua.hidden = !catatanPertama;
+    document.getElementById("fTerapkanSemua").checked = catatanPertama;
+    if (catatanPertama) {
+        document.getElementById("terapkanSemuaLabel").textContent =
+            `Terapkan ke semua ${jamGuruHariIni.length} jam pelajaran ${namaGuru(first.guru_id)} hari ini`;
+    }
+
     document.getElementById("fStatus").value = catatan ? catatan.status : "ST";
     document.getElementById("fKeteranganTugas").value = catatan ? catatan.keterangan_tugas || "" : "";
     toggleKeteranganField();
@@ -266,7 +277,16 @@ async function saveCatatan(e) {
     e.preventDefault();
     const status = document.getElementById("fStatus").value;
     const keterangan = document.getElementById("fKeteranganTugas").value || null;
-    const payloads = activeJadwalIds.map((jid) => ({
+
+    // Catatan pertama guru hari ini + centang aktif -> salin ke semua jam pelajarannya
+    let targetIds = activeJadwalIds;
+    const fieldSemua = document.getElementById("terapkanSemuaField");
+    if (!fieldSemua.hidden && document.getElementById("fTerapkanSemua").checked && activeJadwalIds.length === 1) {
+        const gid = state.jadwal.find((r) => r.id === activeJadwalIds[0]).guru_id;
+        targetIds = baseRows().filter((r) => r.guru_id === gid).map((r) => r.id);
+    }
+
+    const payloads = targetIds.map((jid) => ({
         jadwal_id: jid,
         tanggal: state.tanggal,
         guru_id: state.jadwal.find((r) => r.id === jid).guru_id,

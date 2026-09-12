@@ -1,7 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260910l";
-import { demoData } from "../assets/demo-data.js?v=20260910l";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260910l";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260910l";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912c";
+import { demoData } from "../assets/demo-data.js?v=20260912c";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912c";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912c";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
