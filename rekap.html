@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rekap — Guru Pengganti SMA Plus Merdeka Soreang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=20260912e" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="assets/logo.png" alt="Lambang SMA Plus Merdeka Soreang" />
+      <div class="name">SMA Plus<br/>Merdeka Soreang</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="index.html">Beranda</a>
+      <a href="jadwal.html">Jadwal KBM</a>
+      <a href="ketidakhadiran.html">Ketidakhadiran Guru</a>
+      <a href="penugasan.html">Penugasan Pengganti</a>
+      <a href="rekap.html" class="active">Rekap</a>
+    </nav>
+
+    <div class="sidebar-foot">Sistem Guru Pengganti<br/>Tahun Ajaran 2026/2027</div>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <div>
+        <h1>Rekapitulasi</h1>
+        <p>Kehadiran guru dan penugasan pengganti dalam rentang tanggal.</p>
+      </div>
+      <div class="page-head-actions">
+        <div class="date-field">
+          <label for="tglAwal">Dari</label>
+          <input type="date" id="tglAwal" />
+          <label for="tglAkhir">sampai</label>
+          <input type="date" id="tglAkhir" />
+        </div>
+        <button type="button" id="rekapBtn" class="btn btn-primary">Hitung</button>
+        <button id="lockToggle" class="btn-lock">🔒 Buka Kunci Edit</button>
+      </div>
+    </div>
+
+    <div id="notice" class="notice" hidden>
+      Mode pratinjau — belum terhubung ke Supabase. Rekap dihitung dari data contoh.
+    </div>
+
+    <div class="rekap-tabs">
+      <button type="button" class="rekap-tab active" data-tab="kehadiran">Kehadiran Guru</button>
+      <button type="button" class="rekap-tab" data-tab="pengganti">Guru Pengganti</button>
+      <button type="button" class="rekap-tab" data-tab="libur">Hari Libur</button>
+    </div>
+
+    <!-- TAB: Kehadiran -->
+    <section id="tab-kehadiran" class="card">
+      <div class="toolbar">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><line x1="12.8" y1="12.8" x2="17" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="cariKehadiran" type="search" placeholder="Saring nama guru…" autocomplete="off" />
+        </div>
+        <div class="toolbar-actions">
+          <span id="ringkasKehadiran" class="tugas-note"></span>
+          <button type="button" id="csvKehadiran" class="btn btn-ghost">Unduh CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tabel-rekap">
+          <thead>
+            <tr>
+              <th>Guru</th>
+              <th class="num" title="Jam pelajaran terjadwal pada hari kerja dalam rentang">Terjadwal</th>
+              <th class="num" title="Hadir tatap muka">Hadir</th>
+              <th class="num" title="Hadir tanpa Tatap Muka (dihitung hadir)">HTTM</th>
+              <th class="num" title="Sakit dengan Tugas">ST</th>
+              <th class="num" title="Sakit tanpa Tugas">STT</th>
+              <th class="num" title="Ijin dengan Tugas">IT</th>
+              <th class="num" title="Ijin tanpa Tugas">ITT</th>
+              <th class="num" title="Tanpa Keterangan">TK</th>
+              <th class="num">% Hadir</th>
+            </tr>
+          </thead>
+          <tbody id="bodyKehadiran"></tbody>
+          <tfoot id="footKehadiran"></tfoot>
+        </table>
+      </div>
+      <div class="table-foot">HTTM dihitung hadir. Sabtu–Minggu dan tanggal di tab Hari Libur tidak dihitung sebagai hari kerja. Persentase = (Hadir + HTTM) ÷ Terjadwal.</div>
+    </section>
+
+    <!-- TAB: Pengganti -->
+    <section id="tab-pengganti" class="card" hidden>
+      <div class="toolbar">
+        <div class="day-tabs">
+          <button type="button" class="active" data-view="ringkas">Per guru pengganti</button>
+          <button type="button" data-view="rinci">Rincian per jam</button>
+        </div>
+        <div class="toolbar-actions">
+          <span id="ringkasPengganti" class="tugas-note"></span>
+          <button type="button" id="csvPengganti" class="btn btn-ghost">Unduh CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tabel-rekap" id="tabelRingkas">
+          <thead>
+            <tr>
+              <th>Guru Pengganti</th>
+              <th class="num" title="Guru diTugaskan">GT</th>
+              <th class="num" title="Piket diTugaskan">PT</th>
+              <th class="num" title="Infaler">Inf</th>
+              <th class="num">Total jam</th>
+            </tr>
+          </thead>
+          <tbody id="bodyRingkas"></tbody>
+          <tfoot id="footRingkas"></tfoot>
+        </table>
+        <table class="tabel-rekap" id="tabelRinci" hidden>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jam</th>
+              <th>Kelas</th>
+              <th>Mata Pelajaran</th>
+              <th>Guru Tidak Hadir</th>
+              <th>Ket</th>
+              <th>Guru Pengganti</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bodyRinci"></tbody>
+        </table>
+      </div>
+      <div class="table-foot" id="footPengganti"></div>
+    </section>
+
+    <!-- TAB: Hari libur -->
+    <section id="tab-libur" class="card" hidden>
+      <div class="toolbar">
+        <div class="date-field">
+          <label for="liburTanggal">Tanggal</label>
+          <input type="date" id="liburTanggal" />
+          <input type="text" id="liburKeterangan" class="kelas-filter" placeholder="Keterangan (mis. Maulid Nabi)" style="min-width:220px" />
+          <button type="button" id="liburTambah" class="btn btn-primary">Tambah libur</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tabel-rekap">
+          <thead><tr><th>Tanggal</th><th>Hari</th><th>Keterangan</th><th></th></tr></thead>
+          <tbody id="bodyLibur"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">Tanggal di sini dikecualikan dari perhitungan kehadiran (dianggap tidak ada KBM). Sabtu–Minggu tidak perlu dimasukkan.</div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal: PIN (satu kali per sesi browser) -->
+<div id="pinModal" class="modal-backdrop" hidden>
+  <div class="modal" style="max-width:360px;">
+    <h2>Buka Kunci Edit</h2>
+    <p style="margin:-8px 0 16px;color:#6E6455;font-size:13.5px;">Masukkan PIN untuk mengubah daftar hari libur.</p>
+    <form id="pinForm">
+      <div class="field">
+        <label for="pinInput">PIN</label>
+        <input type="password" id="pinInput" inputmode="text" autocomplete="off" required />
+        <p id="pinError" hidden style="color:#A8432E;font-size:12.5px;margin:6px 0 0;">PIN salah, coba lagi.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="pinCancel" class="btn btn-ghost">Batal</button>
+        <button type="submit" class="btn btn-primary">Konfirmasi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="scripts/rekap.js?v=20260912e"></script>
+</body>
+</html>
