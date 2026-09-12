@@ -56,7 +56,7 @@ export function rekapKehadiran({ jadwal, ketidakhadiran, awal, akhir, liburSet }
         const hadirTM = Math.max(0, b.terjadwal - tidakHadir - b.HTTM);
         const row = { ...b, tidakHadir, hadirTM };
         row.hadir = Math.round(hitungBobot(row) * 100) / 100; // jam hadir berbobot
-        row.persen = b.terjadwal ? Math.round((row.hadir / b.terjadwal) * 1000) / 10 : null;
+        row.persen = b.terjadwal ? Math.round((row.hadir / b.terjadwal) * 10000) / 100 : null;
         hasil.push(row);
     }
     const total = hasil.reduce((t, r) => {
@@ -64,7 +64,7 @@ export function rekapKehadiran({ jadwal, ketidakhadiran, awal, akhir, liburSet }
         return t;
     }, { terjadwal: 0, ST: 0, STT: 0, IT: 0, ITT: 0, TK: 0, HTTM: 0, tidakHadir: 0, hadirTM: 0 });
     total.hadir = Math.round(hitungBobot(total) * 100) / 100;
-    total.persen = total.terjadwal ? Math.round((total.hadir / total.terjadwal) * 1000) / 10 : null;
+    total.persen = total.terjadwal ? Math.round((total.hadir / total.terjadwal) * 10000) / 100 : null;
     return { baris: hasil, total, jumlahHariKerja: hari.length };
 }
 
