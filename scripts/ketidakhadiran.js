@@ -1,7 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912c";
-import { demoData, demoKetidakhadiran } from "../assets/demo-data.js?v=20260912c";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912c";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912c";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912f";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912f";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912f";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912f";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -43,6 +43,7 @@ let state = {
     hari: "Senin",
     jadwal: [],
     ketidakhadiran: [],
+    penugasan: [],
     guru: [],
     kelas: [],
     mapel: [],
@@ -120,9 +121,16 @@ async function loadForDate() {
         ]);
         state.jadwal = jadwal || [];
         state.ketidakhadiran = ketidakhadiran || [];
+        const ids = state.ketidakhadiran.map((k) => k.id);
+        const { data: pen } = ids.length
+            ? await supabaseClient.from("penugasan_pengganti").select("ketidakhadiran_id, guru_pengganti_id, status_pengganti").in("ketidakhadiran_id", ids)
+            : { data: [] };
+        state.penugasan = pen || [];
     } else {
         state.jadwal = demoData.jadwal.filter((r) => r.hari === state.hari);
         state.ketidakhadiran = demoKetidakhadiran.filter((r) => r.tanggal === state.tanggal);
+        const ids = state.ketidakhadiran.map((k) => k.id);
+        state.penugasan = demoPenugasan.filter((p) => ids.includes(p.ketidakhadiran_id));
     }
 
     renderTable();
@@ -133,6 +141,7 @@ const urutKelas = (id) => indeksKelas(state.kelas)(id);
 const namaKelas = (id) => state.kelas.find((k) => k.id === id)?.nama_kelas || id;
 const namaMapel = (id) => state.mapel.find((m) => m.id === id)?.nama_mapel || id;
 const jamInfo = (jamKe) => state.jam.find((j) => j.jam_ke === Number(jamKe));
+const penugasanUntuk = (catatan) => (catatan ? state.penugasan.find((p) => p.ketidakhadiran_id === catatan.id) : null);
 const catatanUntuk = (jadwalId) => state.ketidakhadiran.find((k) => k.jadwal_id === jadwalId);
 
 const STATUS_LABEL = {
@@ -197,7 +206,10 @@ function renderTable() {
 
             const statusCell = catatan
                 ? `<span class="badge-status badge-${catatan.status.toLowerCase()}">${catatan.status}</span>
-                   <span class="tugas-note">${STATUS_LABEL[catatan.status] || ""}</span>`
+                   <span class="tugas-note">${STATUS_LABEL[catatan.status] || ""}</span>${(() => {
+                       const p = penugasanUntuk(catatan);
+                       return p ? `<span class="tugas-note pengganti-note">Pengganti: ${p.status_pengganti === "TP" ? "tidak perlu (TP)" : `${namaGuru(p.guru_pengganti_id)} (${p.status_pengganti})`}</span>` : "";
+                   })()}`
                 : `<span class="badge-status badge-hadir">Hadir</span>`;
 
             const actionCell = catatan
@@ -315,8 +327,28 @@ async function saveCatatan(e) {
     await loadForDate();
 }
 
-async function clearCatatan(jadwalId) {
+let konfirmasiJadwalId = null;
+
+function clearCatatan(jadwalId) {
+    const catatan = catatanUntuk(jadwalId);
+    const p = penugasanUntuk(catatan);
+    if (!p) return hapusCatatan(jadwalId);
+    konfirmasiJadwalId = jadwalId;
+    const siapa = p.status_pengganti === "TP" ? "status Tidak Perlu Pengganti" : `${namaGuru(p.guru_pengganti_id)} (${p.status_pengganti})`;
+    document.getElementById("konfirmasiTeks").textContent =
+        `Jam ini sudah punya penugasan pengganti: ${siapa}. Membatalkan catatan ini akan ikut menghapus penugasannya — guru pengganti mungkin sudah diberi tahu. Lanjutkan?`;
+    document.getElementById("konfirmasiModal").hidden = false;
+}
+
+function tutupKonfirmasi() { konfirmasiJadwalId = null; document.getElementById("konfirmasiModal").hidden = true; }
+
+async function hapusCatatan(jadwalId) {
+    const catatan = catatanUntuk(jadwalId);
     if (isSupabaseConfigured) {
+        if (catatan && penugasanUntuk(catatan)) {
+            const { error } = await supabaseClient.from("penugasan_pengganti").delete().eq("ketidakhadiran_id", catatan.id);
+            if (error) { laporError("Gagal menghapus penugasan pengganti", error); return; }
+        }
         {
             const { error } = await supabaseClient
             .from("ketidakhadiran_guru")
@@ -329,7 +361,12 @@ async function clearCatatan(jadwalId) {
         const idx = demoKetidakhadiran.findIndex(
             (k) => k.jadwal_id === jadwalId && k.tanggal === state.tanggal
         );
-        if (idx > -1) demoKetidakhadiran.splice(idx, 1);
+        if (idx > -1) {
+            const kid = demoKetidakhadiran[idx].id;
+            const pi = demoPenugasan.findIndex((p) => p.ketidakhadiran_id === kid);
+            if (pi > -1) demoPenugasan.splice(pi, 1);
+            demoKetidakhadiran.splice(idx, 1);
+        }
     }
     await loadForDate();
 }
@@ -433,6 +470,10 @@ try {
     document.getElementById("ketidakhadiranForm").addEventListener("submit", saveCatatan);
     document.getElementById("fStatus").addEventListener("change", toggleKeteranganField);
     pasangPencarian();
+    document.getElementById("konfirmasiBatal").addEventListener("click", tutupKonfirmasi);
+    document.getElementById("konfirmasiLanjut").addEventListener("click", async () => {
+        const id = konfirmasiJadwalId; tutupKonfirmasi(); if (id) await hapusCatatan(id);
+    });
 } catch (err) {
     console.error("Ada elemen halaman yang tidak ditemukan — kemungkinan HTML dan JS beda versi. Lakukan hard refresh (Ctrl+Shift+R).", err);
 }
