@@ -1,0 +1,218 @@
+// =========================================================
+// Bagikan ke WhatsApp — Jadwal Guru Pengganti
+// Menyusun data penugasan hari itu menjadi (1) gambar tabel PNG
+// yang rapi untuk dikirim ke grup, dan (2) teks WhatsApp.
+// =========================================================
+
+const HARI_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+export function tanggalPanjang(iso) {
+    const d = new Date(iso + "T00:00:00");
+    return `${HARI_ID[d.getDay()]}, ${d.getDate()} ${BULAN_ID[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// ---------- Susun baris ----------
+// items: [{ guru_id, status, jam_ke, kelas_id, pengganti_id|null, status_pengganti|null }]
+// lookup: { namaGuru(id), namaKelas(id), labelStatus(kode) }
+// Hasil: [{ guru, ket, baris: [{ jamLabel, kelas, pengganti, kode }] }]
+export function susunKelompok(items, lookup) {
+    const perGuru = new Map();
+    for (const it of items) {
+        if (!perGuru.has(it.guru_id)) perGuru.set(it.guru_id, []);
+        perGuru.get(it.guru_id).push(it);
+    }
+    const kelompok = [];
+    for (const [gid, arr] of perGuru) {
+        arr.sort((a, b) => a.jam_ke - b.jam_ke);
+        const baris = [];
+        for (const it of arr) {
+            const last = baris[baris.length - 1];
+            const samaKelas = last && last.kelas_id === it.kelas_id && last.pengganti_id === it.pengganti_id && last.kode === it.status_pengganti && last.jamAkhir === it.jam_ke - 1;
+            if (samaKelas) {
+                last.jamAkhir = it.jam_ke;
+            } else {
+                baris.push({
+                    jamAwal: it.jam_ke, jamAkhir: it.jam_ke,
+                    kelas_id: it.kelas_id, kelas: lookup.namaKelas(it.kelas_id),
+                    pengganti_id: it.pengganti_id, pengganti: it.pengganti_id ? lookup.namaGuru(it.pengganti_id) : "—",
+                    kode: it.status_pengganti,
+                });
+            }
+        }
+        // keterangan: gabungan status ketidakhadiran (biasanya satu)
+        const kets = [...new Set(arr.map((a) => a.status))];
+        kelompok.push({
+            guru_id: gid, guru: lookup.namaGuru(gid),
+            ket: kets.map((k) => lookup.labelStatus(k)).join(" / "),
+            baris: baris.map((b) => ({ ...b, jamLabel: b.jamAwal === b.jamAkhir ? `${b.jamAwal}` : `${b.jamAwal}–${b.jamAkhir}` })),
+        });
+    }
+    return kelompok;
+}
+
+// ---------- Teks WhatsApp ----------
+export function buatTeks({ tanggal, kelompok, catatan, namaSekolah }) {
+    const L = [];
+    L.push(`*Jadwal Guru Pengganti*`);
+    L.push(`${namaSekolah} · ${tanggalPanjang(tanggal)}`);
+    L.push("");
+    for (const k of kelompok) {
+        L.push(`*${k.guru}* — ${k.ket}`);
+        for (const b of k.baris) {
+            L.push(`• Jam ke-${b.jamLabel} · ${b.kelas} → ${b.pengganti}${b.kode ? ` (${b.kode})` : ""}`);
+        }
+        L.push("");
+    }
+    if (catatan && catatan.trim()) { L.push(`_Catatan: ${catatan.trim()}_`); L.push(""); }
+    const pengganti = [...new Set(kelompok.flatMap((k) => k.baris.map((b) => b.pengganti)).filter((n) => n && n !== "—"))];
+    if (pengganti.length) L.push(`Mohon konfirmasi: ${pengganti.join(", ")}`);
+    return L.join("\n").trim();
+}
+
+// ---------- Gambar tabel (Canvas) ----------
+const W = 1000;
+const PAD = 36;
+const COLS = [
+    { key: "guru", label: "Nama Guru", w: 250, align: "left" },
+    { key: "ket", label: "Ket", w: 150, align: "center" },
+    { key: "jam", label: "Jam ke", w: 90, align: "center" },
+    { key: "kelas", label: "Kelas", w: 150, align: "center" },
+    { key: "pengganti", label: "Guru Pengganti", w: 288, align: "left" },
+];
+const ROW_H = 40;
+const HEAD_H = 40;
+
+const C = {
+    bg: "#FBF8F1", surface: "#FFFFFF", ink: "#2B2620", muted: "#6E6455",
+    gold: "#C99A2E", goldTint: "#F3E6C4", charcoal: "#211D17", line: "#D9D0BC", flameTint: "#F3DED7", flame: "#A8432E",
+};
+
+function wrapText(ctx, text, maxW) {
+    const words = String(text).split(" ");
+    const lines = []; let cur = "";
+    for (const w of words) {
+        const t = cur ? cur + " " + w : w;
+        if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+
+// Mengembalikan canvas yang sudah digambar. `createCanvas(w,h)` disuntikkan agar bisa jalan di browser maupun Node.
+export function gambarTabel({ tanggal, kelompok, catatan, namaSekolah, logo, createCanvas, scale = 2 }) {
+    const FONT = '"Public Sans", "Segoe UI", Arial, sans-serif';
+    const SERIF = '"Fraunces", Georgia, serif';
+
+    // ukur dulu tinggi total
+    const probe = createCanvas(10, 10).getContext("2d");
+    probe.font = `500 15px ${FONT}`;
+    const rowsHeights = [];
+    for (const k of kelompok) {
+        for (const b of k.baris) {
+            const lines = wrapText(probe, b.pengganti + (b.kode ? ` (${b.kode})` : ""), COLS[4].w - 24);
+            rowsHeights.push(Math.max(ROW_H, 16 + lines.length * 20));
+        }
+    }
+    const tableH = HEAD_H + rowsHeights.reduce((a, b) => a + b, 0);
+    const headerH = 118;
+    const noteLines = catatan && catatan.trim() ? wrapText(probe, "Catatan: " + catatan.trim(), W - PAD * 2) : [];
+    const footH = 34 + noteLines.length * 20 + 28;
+    const H = headerH + 24 + tableH + 20 + footH;
+
+    const canvas = createCanvas(W * scale, H * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    // latar
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+
+    // header arang
+    ctx.fillStyle = C.charcoal; ctx.fillRect(0, 0, W, headerH);
+    ctx.fillStyle = C.gold; ctx.fillRect(0, headerH - 4, W, 4);
+    let tx = PAD;
+    if (logo) {
+        const s = 70;
+        ctx.drawImage(logo, PAD, (headerH - 4 - s) / 2, s, s);
+        tx = PAD + s + 18;
+    }
+    ctx.fillStyle = "#FFFFFF"; ctx.font = `600 30px ${SERIF}`; ctx.textBaseline = "alphabetic";
+    ctx.fillText("Jadwal Guru Pengganti", tx, 52);
+    ctx.fillStyle = "#C9C1AE"; ctx.font = `500 15px ${FONT}`;
+    ctx.fillText(`${namaSekolah}  ·  ${tanggalPanjang(tanggal)}`, tx, 80);
+
+    // tabel
+    const x0 = PAD, y0 = headerH + 24;
+    const tableW = COLS.reduce((a, c) => a + c.w, 0);
+    ctx.fillStyle = C.surface; ctx.fillRect(x0, y0, tableW, tableH);
+
+    // kepala tabel
+    ctx.fillStyle = C.goldTint; ctx.fillRect(x0, y0, tableW, HEAD_H);
+    ctx.fillStyle = "#6B4E10"; ctx.font = `700 13px ${FONT}`;
+    let cx = x0;
+    for (const c of COLS) {
+        const tw = ctx.measureText(c.label).width;
+        const lx = c.align === "center" ? cx + (c.w - tw) / 2 : cx + 12;
+        ctx.fillText(c.label.toUpperCase(), lx, y0 + 25);
+        cx += c.w;
+    }
+
+    // baris
+    let y = y0 + HEAD_H; let ri = 0;
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    for (const k of kelompok) {
+        const groupTop = y;
+        const groupH = k.baris.reduce((a, _, i) => a + rowsHeights[ri + i], 0);
+        // sel gabungan: nama guru & ket
+        ctx.fillStyle = C.ink; ctx.font = `600 15px ${FONT}`;
+        const namaLines = wrapText(ctx, k.guru, COLS[0].w - 24);
+        const nh = namaLines.length * 20;
+        namaLines.forEach((ln, i) => ctx.fillText(ln, x0 + 12, groupTop + (groupH - nh) / 2 + 15 + i * 20));
+        ctx.font = `500 14px ${FONT}`;
+        const ketLines = wrapText(ctx, k.ket, COLS[1].w - 20);
+        const kh = ketLines.length * 19;
+        ketLines.forEach((ln, i) => {
+            const tw = ctx.measureText(ln).width;
+            ctx.fillStyle = C.flame;
+            ctx.fillText(ln, x0 + COLS[0].w + (COLS[1].w - tw) / 2, groupTop + (groupH - kh) / 2 + 14 + i * 19);
+        });
+        // baris per jam
+        for (const b of k.baris) {
+            const rh = rowsHeights[ri];
+            let cxx = x0 + COLS[0].w + COLS[1].w;
+            ctx.fillStyle = C.ink; ctx.font = `600 15px ${FONT}`;
+            let t = b.jamLabel; let tw = ctx.measureText(t).width;
+            ctx.fillText(t, cxx + (COLS[2].w - tw) / 2, y + rh / 2 + 5);
+            cxx += COLS[2].w;
+            ctx.font = `500 15px ${FONT}`;
+            t = b.kelas; tw = ctx.measureText(t).width;
+            ctx.fillText(t, cxx + (COLS[3].w - tw) / 2, y + rh / 2 + 5);
+            cxx += COLS[3].w;
+            const pl = wrapText(ctx, b.pengganti + (b.kode ? ` (${b.kode})` : ""), COLS[4].w - 24);
+            const ph = pl.length * 20;
+            pl.forEach((ln, i) => ctx.fillText(ln, cxx + 12, y + (rh - ph) / 2 + 15 + i * 20));
+            // garis bawah baris (hanya kolom jam..pengganti)
+            ctx.beginPath(); ctx.moveTo(x0 + COLS[0].w + COLS[1].w, y + rh); ctx.lineTo(x0 + tableW, y + rh); ctx.stroke();
+            y += rh; ri++;
+        }
+        // garis bawah kelompok (seluruh lebar), lebih tegas
+        ctx.strokeStyle = "#B9AE95"; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + tableW, y); ctx.stroke(); ctx.strokeStyle = C.line;
+    }
+    // garis kolom & bingkai
+    cx = x0;
+    for (let i = 0; i < COLS.length; i++) {
+        ctx.beginPath(); ctx.moveTo(cx, y0); ctx.lineTo(cx, y0 + tableH); ctx.stroke();
+        cx += COLS[i].w;
+    }
+    ctx.strokeStyle = "#B9AE95"; ctx.strokeRect(x0 + 0.5, y0 + 0.5, tableW - 1, tableH - 1);
+
+    // catatan & keterangan kode
+    let fy = y0 + tableH + 30;
+    ctx.fillStyle = C.ink; ctx.font = `600 14px ${FONT}`;
+    noteLines.forEach((ln, i) => ctx.fillText(ln, PAD, fy + i * 20));
+    fy += noteLines.length * 20 + (noteLines.length ? 10 : 0);
+    ctx.fillStyle = C.muted; ctx.font = `400 12px ${FONT}`;
+    ctx.fillText("GT = Guru diTugaskan · PT = Piket diTugaskan · Inf = Infaler   —   dibuat dari Sistem Guru Pengganti", PAD, fy + 6);
+
+    return canvas;
+}
