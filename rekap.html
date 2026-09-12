@@ -6,7 +6,7 @@
 <title>Rekap — Guru Pengganti SMA Plus Merdeka Soreang</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20260912f" />
+<link rel="stylesheet" href="assets/style.css?v=20260912h" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -76,12 +76,13 @@
               <th>Guru</th>
               <th class="num" title="Jam pelajaran terjadwal pada hari kerja dalam rentang">Terjadwal</th>
               <th class="num" title="Hadir tatap muka">Hadir</th>
-              <th class="num" title="Hadir tanpa Tatap Muka (dihitung hadir)">HTTM</th>
-              <th class="num" title="Sakit dengan Tugas">ST</th>
-              <th class="num" title="Sakit tanpa Tugas">STT</th>
-              <th class="num" title="Ijin dengan Tugas">IT</th>
-              <th class="num" title="Ijin tanpa Tugas">ITT</th>
-              <th class="num" title="Tanpa Keterangan">TK</th>
+              <th class="num" title="Hadir tanpa Tatap Muka (bobot 100%)">HTTM</th>
+              <th class="num" title="Sakit dengan Tugas (bobot 20%)">ST</th>
+              <th class="num" title="Sakit tanpa Tugas (bobot 15%)">STT</th>
+              <th class="num" title="Ijin dengan Tugas (bobot 10%)">IT</th>
+              <th class="num" title="Ijin tanpa Tugas (bobot 5%)">ITT</th>
+              <th class="num" title="Tanpa Keterangan (bobot 0%)">TK</th>
+              <th class="num" title="Jam hadir setelah pembobotan">Hadir (bobot)</th>
               <th class="num">% Hadir</th>
             </tr>
           </thead>
@@ -89,7 +90,7 @@
           <tfoot id="footKehadiran"></tfoot>
         </table>
       </div>
-      <div class="table-foot">HTTM dihitung hadir. Sabtu–Minggu dan tanggal di tab Hari Libur tidak dihitung sebagai hari kerja. Persentase = (Hadir + HTTM) ÷ Terjadwal.</div>
+      <div class="table-foot">Bobot kehadiran per status: HTTM 100% · ST 20% · STT 15% · IT 10% · ITT 5% · TK 0%. % Hadir = (Hadir tatap muka + jumlah berbobot) ÷ Terjadwal. Sabtu–Minggu dan tanggal di tab Hari Libur tidak dihitung sebagai hari kerja.</div>
     </section>
 
     <!-- TAB: Pengganti -->
@@ -177,6 +178,6 @@
   </div>
 </div>
 
-<script type="module" src="scripts/rekap.js?v=20260912f"></script>
+<script type="module" src="scripts/rekap.js?v=20260912h"></script>
 </body>
 </html>
