@@ -1,9 +1,9 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912h";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912h";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912h";
-import { urutkanKelas } from "../assets/kelas-order.js?v=20260912h";
-import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260912h";
-import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912h";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912i";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912i";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912i";
+import { urutkanKelas } from "../assets/kelas-order.js?v=20260912i";
+import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260912i";
+import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912i";
 
 try { initLockUI(() => renderLibur()); } catch (err) { console.error("Gagal memasang tombol kunci:", err); }
 
@@ -110,7 +110,7 @@ async function hitung() {
 // ---------- Render kehadiran ----------
 const num = (v) => `<td class="num">${v}</td>`;
 const fmt = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
-const persenCell = (p) => p === null ? `<td class="num">—</td>` : `<td class="num"><span class="persen ${p >= 95 ? "baik" : p >= 85 ? "sedang" : "rendah"}">${p.toFixed(1).replace(".", ",")}%</span></td>`;
+const persenCell = (p) => p === null ? `<td class="num">—</td>` : `<td class="num"><span class="persen ${p >= 95 ? "baik" : p >= 85 ? "sedang" : "rendah"}">${p.toFixed(2).replace(".", ",")}%</span></td>`;
 
 function barisKehadiranTersaring() {
     const q = state.saring.trim().toLowerCase();
