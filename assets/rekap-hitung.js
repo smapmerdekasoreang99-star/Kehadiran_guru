@@ -1,0 +1,94 @@
+// =========================================================
+// Perhitungan rekap — fungsi murni (tanpa DOM), dipakai scripts/rekap.js
+// =========================================================
+
+const HARI_FROM_JS_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+export const STATUS_ABSEN = ["ST", "STT", "IT", "ITT", "TK", "HTTM"];
+
+export function isoTanggal(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Daftar tanggal kerja (Senin-Jumat, bukan libur) dalam rentang, beserta nama harinya
+export function hariKerja(awal, akhir, liburSet) {
+    const out = [];
+    const d = new Date(awal + "T00:00:00");
+    const end = new Date(akhir + "T00:00:00");
+    while (d <= end) {
+        const iso = isoTanggal(d);
+        const hari = HARI_FROM_JS_DAY[d.getDay()];
+        if (hari !== "Sabtu" && hari !== "Minggu" && !liburSet.has(iso)) out.push({ tanggal: iso, hari });
+        d.setDate(d.getDate() + 1);
+    }
+    return out;
+}
+
+// ---------- Rekap kehadiran per guru ----------
+// jadwal: [{ id, hari, jam_ke, guru_id }]  ketidakhadiran: [{ jadwal_id, tanggal, guru_id, status }]
+export function rekapKehadiran({ jadwal, ketidakhadiran, awal, akhir, liburSet }) {
+    const hari = hariKerja(awal, akhir, liburSet);
+    const jumlahHari = {};
+    for (const h of hari) jumlahHari[h.hari] = (jumlahHari[h.hari] || 0) + 1;
+    const tanggalSet = new Set(hari.map((h) => h.tanggal));
+
+    const per = new Map();
+    const baris = (gid) => {
+        if (!per.has(gid)) per.set(gid, { guru_id: gid, terjadwal: 0, ST: 0, STT: 0, IT: 0, ITT: 0, TK: 0, HTTM: 0 });
+        return per.get(gid);
+    };
+    for (const j of jadwal) {
+        const n = jumlahHari[j.hari] || 0;
+        if (n) baris(j.guru_id).terjadwal += n;
+    }
+    for (const k of ketidakhadiran) {
+        if (!tanggalSet.has(k.tanggal)) continue; // di luar rentang / hari libur
+        const b = baris(k.guru_id);
+        if (b[k.status] !== undefined) b[k.status] += 1;
+    }
+    const hasil = [];
+    for (const b of per.values()) {
+        const tidakHadir = b.ST + b.STT + b.IT + b.ITT + b.TK;
+        const hadirTM = Math.max(0, b.terjadwal - tidakHadir - b.HTTM);
+        const hadir = hadirTM + b.HTTM; // HTTM dihitung hadir
+        hasil.push({ ...b, tidakHadir, hadirTM, hadir, persen: b.terjadwal ? Math.round((hadir / b.terjadwal) * 1000) / 10 : null });
+    }
+    const total = hasil.reduce((t, r) => {
+        for (const k of ["terjadwal", "ST", "STT", "IT", "ITT", "TK", "HTTM", "tidakHadir", "hadirTM", "hadir"]) t[k] += r[k];
+        return t;
+    }, { terjadwal: 0, ST: 0, STT: 0, IT: 0, ITT: 0, TK: 0, HTTM: 0, tidakHadir: 0, hadirTM: 0, hadir: 0 });
+    total.persen = total.terjadwal ? Math.round((total.hadir / total.terjadwal) * 1000) / 10 : null;
+    return { baris: hasil, total, jumlahHariKerja: hari.length };
+}
+
+// ---------- Rekap guru pengganti ----------
+// penugasan: [{ ketidakhadiran_id, guru_pengganti_id, status_pengganti }]
+// ketidakhadiran: [{ id, jadwal_id, tanggal, guru_id, status }]  jadwal: [{ id, jam_ke, kelas_id, mapel_id, guru_id }]
+export function rekapPengganti({ penugasan, ketidakhadiran, jadwal, awal, akhir }) {
+    const kMap = new Map(ketidakhadiran.map((k) => [k.id, k]));
+    const jMap = new Map(jadwal.map((j) => [j.id, j]));
+    const per = new Map();
+    const rincian = [];
+    let tanpaPengganti = 0;
+    for (const p of penugasan) {
+        const k = kMap.get(p.ketidakhadiran_id);
+        if (!k || k.tanggal < awal || k.tanggal > akhir) continue;
+        const j = jMap.get(k.jadwal_id);
+        if (!j) continue;
+        if (p.status_pengganti === "TP" || !p.guru_pengganti_id) { tanpaPengganti++; rincian.push({ tanggal: k.tanggal, jam_ke: j.jam_ke, kelas_id: j.kelas_id, mapel_id: j.mapel_id, guru_id: j.guru_id, status: k.status, pengganti_id: null, kode: "TP" }); continue; }
+        if (!per.has(p.guru_pengganti_id)) per.set(p.guru_pengganti_id, { guru_id: p.guru_pengganti_id, GT: 0, PT: 0, Inf: 0, total: 0 });
+        const b = per.get(p.guru_pengganti_id);
+        if (b[p.status_pengganti] !== undefined) b[p.status_pengganti] += 1;
+        b.total += 1;
+        rincian.push({ tanggal: k.tanggal, jam_ke: j.jam_ke, kelas_id: j.kelas_id, mapel_id: j.mapel_id, guru_id: j.guru_id, status: k.status, pengganti_id: p.guru_pengganti_id, kode: p.status_pengganti });
+    }
+    rincian.sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.jam_ke - b.jam_ke);
+    const baris = [...per.values()].sort((a, b) => b.total - a.total);
+    const total = baris.reduce((t, r) => ({ GT: t.GT + r.GT, PT: t.PT + r.PT, Inf: t.Inf + r.Inf, total: t.total + r.total }), { GT: 0, PT: 0, Inf: 0, total: 0 });
+    return { baris, total, rincian, tanpaPengganti };
+}
+
+// ---------- CSV ----------
+export function keCSV(header, rows) {
+    const esc = (v) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    return "\uFEFF" + [header, ...rows].map((r) => r.map(esc).join(";")).join("\r\n");
+}

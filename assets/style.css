@@ -452,7 +452,7 @@ textarea {
 
 .shortcut-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
 }
 
@@ -741,3 +741,19 @@ textarea {
 .bagikan-utama { font-size: 15px; padding: 12px 18px; }
 .bagikan-sekunder { margin-top: 8px; }
 .bagikan-sekunder .btn { font-size: 13px; padding: 8px 12px; }
+
+/* ---------- Rekap ---------- */
+.rekap-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.rekap-tab {
+    padding: 9px 16px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-muted); font-weight: 600; font-size: 14px; cursor: pointer;
+}
+.rekap-tab.active { background: var(--ink); color: #F6EFDC; border-color: var(--ink); }
+.tabel-rekap th.num, .tabel-rekap td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tabel-rekap thead th { white-space: nowrap; }
+.tabel-rekap tfoot td { font-weight: 700; background: #FAF6EA; border-top: 2px solid #B9AE95; }
+.persen { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 12.5px; }
+.persen.baik { background: #E7F1E3; color: #3F6B33; }
+.persen.sedang { background: var(--gold-tint); color: #6B4E10; }
+.persen.rendah { background: var(--flame-tint); color: var(--flame); }
+.date-field input[type="text"] { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
