@@ -1,9 +1,9 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912e";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912e";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912e";
-import { urutkanKelas } from "../assets/kelas-order.js?v=20260912e";
-import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260912e";
-import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912e";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912h";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912h";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912h";
+import { urutkanKelas } from "../assets/kelas-order.js?v=20260912h";
+import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260912h";
+import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912h";
 
 try { initLockUI(() => renderLibur()); } catch (err) { console.error("Gagal memasang tombol kunci:", err); }
 
@@ -109,6 +109,7 @@ async function hitung() {
 
 // ---------- Render kehadiran ----------
 const num = (v) => `<td class="num">${v}</td>`;
+const fmt = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
 const persenCell = (p) => p === null ? `<td class="num">—</td>` : `<td class="num"><span class="persen ${p >= 95 ? "baik" : p >= 85 ? "sedang" : "rendah"}">${p.toFixed(1).replace(".", ",")}%</span></td>`;
 
 function barisKehadiranTersaring() {
@@ -124,11 +125,11 @@ function renderKehadiran() {
     const rows = barisKehadiranTersaring();
     document.getElementById("bodyKehadiran").innerHTML = rows.map((r) => `
       <tr>
-        <td>${r.nama}</td>${num(r.terjadwal)}${num(r.hadirTM)}${num(r.HTTM)}${num(r.ST)}${num(r.STT)}${num(r.IT)}${num(r.ITT)}${num(r.TK)}${persenCell(r.persen)}
-      </tr>`).join("") || `<tr><td colspan="10" class="empty-state">Tidak ada data pada rentang ini.</td></tr>`;
+        <td>${r.nama}</td>${num(r.terjadwal)}${num(r.hadirTM)}${num(r.HTTM)}${num(r.ST)}${num(r.STT)}${num(r.IT)}${num(r.ITT)}${num(r.TK)}${num(fmt(r.hadir))}${persenCell(r.persen)}
+      </tr>`).join("") || `<tr><td colspan="11" class="empty-state">Tidak ada data pada rentang ini.</td></tr>`;
     const t = h.total;
     document.getElementById("footKehadiran").innerHTML = `
-      <tr class="total"><td>Total (${h.baris.length} guru)</td>${num(t.terjadwal)}${num(t.hadirTM)}${num(t.HTTM)}${num(t.ST)}${num(t.STT)}${num(t.IT)}${num(t.ITT)}${num(t.TK)}${persenCell(t.persen)}</tr>`;
+      <tr class="total"><td>Total (${h.baris.length} guru)</td>${num(t.terjadwal)}${num(t.hadirTM)}${num(t.HTTM)}${num(t.ST)}${num(t.STT)}${num(t.IT)}${num(t.ITT)}${num(t.TK)}${num(fmt(t.hadir))}${persenCell(t.persen)}</tr>`;
     document.getElementById("ringkasKehadiran").textContent = `${h.jumlahHariKerja} hari kerja · ${tanggalPanjang(state.awal)} – ${tanggalPanjang(state.akhir)}`;
 }
 
@@ -197,8 +198,8 @@ function unduh(nama, isi) {
 }
 
 function csvKehadiran() {
-    const rows = barisKehadiranTersaring().map((r) => [r.nama, r.terjadwal, r.hadirTM, r.HTTM, r.ST, r.STT, r.IT, r.ITT, r.TK, r.persen === null ? "" : r.persen]);
-    unduh(`rekap-kehadiran-${state.awal}_${state.akhir}.csv`, keCSV(["Guru", "Terjadwal", "Hadir", "HTTM", "ST", "STT", "IT", "ITT", "TK", "% Hadir"], rows));
+    const rows = barisKehadiranTersaring().map((r) => [r.nama, r.terjadwal, r.hadirTM, r.HTTM, r.ST, r.STT, r.IT, r.ITT, r.TK, r.hadir, r.persen === null ? "" : r.persen]);
+    unduh(`rekap-kehadiran-${state.awal}_${state.akhir}.csv`, keCSV(["Guru", "Terjadwal", "Hadir tatap muka", "HTTM", "ST", "STT", "IT", "ITT", "TK", "Hadir (bobot)", "% Hadir"], rows));
 }
 
 function csvPengganti() {
