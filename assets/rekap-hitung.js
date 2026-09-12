@@ -5,6 +5,9 @@
 const HARI_FROM_JS_DAY = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 export const STATUS_ABSEN = ["ST", "STT", "IT", "ITT", "TK", "HTTM"];
 
+// Bobot kehadiran per status (kebijakan sekolah): dianggap hadir sekian persen
+export const BOBOT_HADIR = { HTTM: 1.0, ST: 0.20, STT: 0.15, IT: 0.10, ITT: 0.05, TK: 0.0 };
+
 export function isoTanggal(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -45,17 +48,22 @@ export function rekapKehadiran({ jadwal, ketidakhadiran, awal, akhir, liburSet }
         const b = baris(k.guru_id);
         if (b[k.status] !== undefined) b[k.status] += 1;
     }
+    const hitungBobot = (b) =>
+        b.hadirTM + STATUS_ABSEN.reduce((a, st) => a + b[st] * (BOBOT_HADIR[st] ?? 0), 0);
     const hasil = [];
     for (const b of per.values()) {
         const tidakHadir = b.ST + b.STT + b.IT + b.ITT + b.TK;
         const hadirTM = Math.max(0, b.terjadwal - tidakHadir - b.HTTM);
-        const hadir = hadirTM + b.HTTM; // HTTM dihitung hadir
-        hasil.push({ ...b, tidakHadir, hadirTM, hadir, persen: b.terjadwal ? Math.round((hadir / b.terjadwal) * 1000) / 10 : null });
+        const row = { ...b, tidakHadir, hadirTM };
+        row.hadir = Math.round(hitungBobot(row) * 100) / 100; // jam hadir berbobot
+        row.persen = b.terjadwal ? Math.round((row.hadir / b.terjadwal) * 1000) / 10 : null;
+        hasil.push(row);
     }
     const total = hasil.reduce((t, r) => {
-        for (const k of ["terjadwal", "ST", "STT", "IT", "ITT", "TK", "HTTM", "tidakHadir", "hadirTM", "hadir"]) t[k] += r[k];
+        for (const k of ["terjadwal", "ST", "STT", "IT", "ITT", "TK", "HTTM", "tidakHadir", "hadirTM"]) t[k] += r[k];
         return t;
-    }, { terjadwal: 0, ST: 0, STT: 0, IT: 0, ITT: 0, TK: 0, HTTM: 0, tidakHadir: 0, hadirTM: 0, hadir: 0 });
+    }, { terjadwal: 0, ST: 0, STT: 0, IT: 0, ITT: 0, TK: 0, HTTM: 0, tidakHadir: 0, hadirTM: 0 });
+    total.hadir = Math.round(hitungBobot(total) * 100) / 100;
     total.persen = total.terjadwal ? Math.round((total.hadir / total.terjadwal) * 1000) / 10 : null;
     return { baris: hasil, total, jumlahHariKerja: hari.length };
 }
