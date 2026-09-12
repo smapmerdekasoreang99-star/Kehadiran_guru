@@ -6,7 +6,7 @@
 <title>Ketidakhadiran Guru — Guru Pengganti SMA Plus Merdeka Soreang</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20260910l" />
+<link rel="stylesheet" href="assets/style.css?v=20260912a" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -114,6 +114,14 @@
         </select>
       </div>
 
+      <div class="field terapkan-semua" id="terapkanSemuaField" hidden>
+        <label class="check-row">
+          <input type="checkbox" id="fTerapkanSemua" checked />
+          <span id="terapkanSemuaLabel">Terapkan ke semua jam pelajaran guru ini hari ini</span>
+        </label>
+        <p class="field-hint">Ini catatan pertama untuk guru ini hari ini. Setelah tersimpan, status tiap jam tetap bisa diubah satu per satu.</p>
+      </div>
+
       <div class="field" id="keteranganField">
         <label for="fKeteranganTugas">Keterangan (tugas untuk siswa, dsb.)</label>
         <textarea id="fKeteranganTugas" placeholder="Contoh: kerjakan LKPD hal. 12–14, dikumpulkan pekan depan"></textarea>
@@ -146,6 +154,6 @@
   </div>
 </div>
 
-<script type="module" src="scripts/ketidakhadiran.js?v=20260910l"></script>
+<script type="module" src="scripts/ketidakhadiran.js?v=20260912a"></script>
 </body>
 </html>
