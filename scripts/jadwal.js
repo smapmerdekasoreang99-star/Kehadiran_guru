@@ -1,7 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912c";
-import { demoData } from "../assets/demo-data.js?v=20260912c";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912c";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912c";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260913a";
+import { demoData } from "../assets/demo-data.js?v=20260913a";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260913a";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260913a";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -59,10 +59,10 @@ async function boot() {
     if (isSupabaseConfigured) {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
             await Promise.all([
-                supabaseClient.from("guru").select("id, nama").order("nama"),
-                supabaseClient.from("kelas").select("id, nama_kelas, tingkat"),
-                supabaseClient.from("mapel").select("id, nama_mapel").order("nama_mapel"),
-                supabaseClient.from("jam_pelajaran").select("*").order("jam_ke"),
+                supabaseClient.from("kg_guru").select("id, nama").order("nama"),
+                supabaseClient.from("kg_kelas").select("id, nama_kelas, tingkat"),
+                supabaseClient.from("kg_mapel").select("id, nama_mapel").order("nama_mapel"),
+                supabaseClient.from("kg_jam_pelajaran").select("*").order("jam_ke"),
             ]);
         state.guru = guru || [];
         state.kelas = urutkanKelas(kelas || []);
@@ -112,7 +112,7 @@ function renderDayTabs() {
 async function loadJadwal() {
     if (isSupabaseConfigured) {
         const { data, error } = await supabaseClient
-            .from("jadwal_kbm")
+            .from("kg_jadwal_kbm")
             .select("id, hari, jam_ke, kelas_id, mapel_id, guru_id")
             .order("jam_ke");
         if (error) { laporError("Gagal memuat jadwal", error); return; }
@@ -356,9 +356,9 @@ async function saveJadwal(e) {
 
     if (isSupabaseConfigured) {
         const { error } = editingId
-            ? await supabaseClient.from("jadwal_kbm").update(payload).eq("id", editingId)
-            : await supabaseClient.from("jadwal_kbm").insert({ id: `J${Date.now()}`, ...payload });
-        if (error) { laporError("Gagal menyimpan ke tabel jadwal_kbm", error); return; }
+            ? await supabaseClient.from("kg_jadwal_kbm").update(payload).eq("id", editingId)
+            : await supabaseClient.from("kg_jadwal_kbm").insert({ id: `J${Date.now()}`, ...payload });
+        if (error) { laporError("Gagal menyimpan ke tabel kg_jadwal_kbm", error); return; }
     } else {
         if (editingId) {
             const idx = demoData.jadwal.findIndex((r) => r.id === editingId);
@@ -388,8 +388,8 @@ function closeConfirmDelete() {
 async function doDelete() {
     if (!deletingId) return;
     if (isSupabaseConfigured) {
-        const { error } = await supabaseClient.from("jadwal_kbm").delete().eq("id", deletingId);
-        if (error) { laporError("Gagal menghapus dari tabel jadwal_kbm", error); return; }
+        const { error } = await supabaseClient.from("kg_jadwal_kbm").delete().eq("id", deletingId);
+        if (error) { laporError("Gagal menghapus dari tabel kg_jadwal_kbm", error); return; }
     } else {
         const idx = demoData.jadwal.findIndex((r) => r.id === deletingId);
         if (idx > -1) demoData.jadwal.splice(idx, 1);

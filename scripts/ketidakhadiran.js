@@ -1,7 +1,7 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912f";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912f";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912f";
-import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260912f";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260913a";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260913a";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260913a";
+import { urutkanKelas, indeksKelas } from "../assets/kelas-order.js?v=20260913a";
 
 // Tombol kunci dipasang paling pertama & terpisah, supaya tetap berfungsi
 // walaupun ada bagian lain halaman yang gagal dimuat.
@@ -57,10 +57,10 @@ async function boot() {
     if (isSupabaseConfigured) {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jam }] =
             await Promise.all([
-                supabaseClient.from("guru").select("id, nama").order("nama"),
-                supabaseClient.from("kelas").select("id, nama_kelas, tingkat"),
-                supabaseClient.from("mapel").select("id, nama_mapel").order("nama_mapel"),
-                supabaseClient.from("jam_pelajaran").select("*").order("jam_ke"),
+                supabaseClient.from("kg_guru").select("id, nama").order("nama"),
+                supabaseClient.from("kg_kelas").select("id, nama_kelas, tingkat"),
+                supabaseClient.from("kg_mapel").select("id, nama_mapel").order("nama_mapel"),
+                supabaseClient.from("kg_jam_pelajaran").select("*").order("jam_ke"),
             ]);
         state.guru = guru || [];
         state.kelas = urutkanKelas(kelas || []);
@@ -110,12 +110,12 @@ async function loadForDate() {
     if (isSupabaseConfigured) {
         const [{ data: jadwal }, { data: ketidakhadiran }] = await Promise.all([
             supabaseClient
-                .from("jadwal_kbm")
+                .from("kg_jadwal_kbm")
                 .select("id, hari, jam_ke, kelas_id, mapel_id, guru_id")
                 .eq("hari", state.hari)
                 .order("jam_ke"),
             supabaseClient
-                .from("ketidakhadiran_guru")
+                .from("kg_ketidakhadiran_guru")
                 .select("*")
                 .eq("tanggal", state.tanggal),
         ]);
@@ -123,7 +123,7 @@ async function loadForDate() {
         state.ketidakhadiran = ketidakhadiran || [];
         const ids = state.ketidakhadiran.map((k) => k.id);
         const { data: pen } = ids.length
-            ? await supabaseClient.from("penugasan_pengganti").select("ketidakhadiran_id, guru_pengganti_id, status_pengganti").in("ketidakhadiran_id", ids)
+            ? await supabaseClient.from("kg_penugasan_pengganti").select("ketidakhadiran_id, guru_pengganti_id, status_pengganti").in("ketidakhadiran_id", ids)
             : { data: [] };
         state.penugasan = pen || [];
     } else {
@@ -309,9 +309,9 @@ async function saveCatatan(e) {
     if (isSupabaseConfigured) {
         {
             const { error } = await supabaseClient
-            .from("ketidakhadiran_guru")
+            .from("kg_ketidakhadiran_guru")
             .upsert(payloads, { onConflict: "jadwal_id,tanggal" });
-            if (error) { laporError("Gagal menyimpan ke tabel ketidakhadiran_guru", error); return; }
+            if (error) { laporError("Gagal menyimpan ke tabel kg_ketidakhadiran_guru", error); return; }
         }
     } else {
         for (const payload of payloads) {
@@ -346,16 +346,16 @@ async function hapusCatatan(jadwalId) {
     const catatan = catatanUntuk(jadwalId);
     if (isSupabaseConfigured) {
         if (catatan && penugasanUntuk(catatan)) {
-            const { error } = await supabaseClient.from("penugasan_pengganti").delete().eq("ketidakhadiran_id", catatan.id);
+            const { error } = await supabaseClient.from("kg_penugasan_pengganti").delete().eq("ketidakhadiran_id", catatan.id);
             if (error) { laporError("Gagal menghapus penugasan pengganti", error); return; }
         }
         {
             const { error } = await supabaseClient
-            .from("ketidakhadiran_guru")
+            .from("kg_ketidakhadiran_guru")
             .delete()
             .eq("jadwal_id", jadwalId)
             .eq("tanggal", state.tanggal);
-            if (error) { laporError("Gagal menghapus ke tabel ketidakhadiran_guru", error); return; }
+            if (error) { laporError("Gagal menghapus ke tabel kg_ketidakhadiran_guru", error); return; }
         }
     } else {
         const idx = demoKetidakhadiran.findIndex(

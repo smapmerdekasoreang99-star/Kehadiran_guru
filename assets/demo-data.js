@@ -238,92 +238,92 @@ export const demoData = {
   "kelas": [
     {
       "id": "X-1",
-      "nama_kelas": "X-1",
+      "nama_kelas": "10-1",
       "tingkat": 10
     },
     {
       "id": "X-2",
-      "nama_kelas": "X-2",
+      "nama_kelas": "10-2",
       "tingkat": 10
     },
     {
       "id": "X-3",
-      "nama_kelas": "X-3",
+      "nama_kelas": "10-3",
       "tingkat": 10
     },
     {
       "id": "X-4",
-      "nama_kelas": "X-4",
+      "nama_kelas": "10-4",
       "tingkat": 10
     },
     {
       "id": "X-5",
-      "nama_kelas": "X-5",
+      "nama_kelas": "10-5",
       "tingkat": 10
     },
     {
       "id": "X-6",
-      "nama_kelas": "X-6",
+      "nama_kelas": "10-6",
       "tingkat": 10
     },
     {
       "id": "XI-1",
-      "nama_kelas": "XI-1",
+      "nama_kelas": "11-1",
       "tingkat": 11
     },
     {
       "id": "XI-2",
-      "nama_kelas": "XI-2",
+      "nama_kelas": "11-2",
       "tingkat": 11
     },
     {
       "id": "XI-3",
-      "nama_kelas": "XI-3",
+      "nama_kelas": "11-3",
       "tingkat": 11
     },
     {
       "id": "XI-4",
-      "nama_kelas": "XI-4",
+      "nama_kelas": "11-4",
       "tingkat": 11
     },
     {
       "id": "XI-5",
-      "nama_kelas": "XI-5",
+      "nama_kelas": "11-5",
       "tingkat": 11
     },
     {
       "id": "XI-6",
-      "nama_kelas": "XI-6",
+      "nama_kelas": "11-6",
       "tingkat": 11
     },
     {
       "id": "XII-1",
-      "nama_kelas": "XII-1",
+      "nama_kelas": "12-1",
       "tingkat": 12
     },
     {
       "id": "XII-2",
-      "nama_kelas": "XII-2",
+      "nama_kelas": "12-2",
       "tingkat": 12
     },
     {
       "id": "XII-3",
-      "nama_kelas": "XII-3",
+      "nama_kelas": "12-3",
       "tingkat": 12
     },
     {
       "id": "XII-4",
-      "nama_kelas": "XII-4",
+      "nama_kelas": "12-4",
       "tingkat": 12
     },
     {
       "id": "XII-5",
-      "nama_kelas": "XII-5",
+      "nama_kelas": "12-5",
       "tingkat": 12
     },
     {
       "id": "XII-6",
-      "nama_kelas": "XII-6",
+      "nama_kelas": "12-6",
       "tingkat": 12
     },
     {

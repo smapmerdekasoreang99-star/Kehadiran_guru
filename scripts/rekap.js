@@ -1,9 +1,9 @@
-import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260912i";
-import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260912i";
-import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260912i";
-import { urutkanKelas } from "../assets/kelas-order.js?v=20260912i";
-import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260912i";
-import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260912i";
+import { supabaseClient, isSupabaseConfigured } from "../assets/supabase-client.js?v=20260913a";
+import { demoData, demoKetidakhadiran, demoPenugasan } from "../assets/demo-data.js?v=20260913a";
+import { isUnlocked, initLockUI } from "../assets/auth-gate.js?v=20260913a";
+import { urutkanKelas } from "../assets/kelas-order.js?v=20260913a";
+import { rekapKehadiran, rekapPengganti, keCSV, isoTanggal } from "../assets/rekap-hitung.js?v=20260913a";
+import { tanggalPanjang } from "../assets/bagikan-wa.js?v=20260913a";
 
 try { initLockUI(() => renderLibur()); } catch (err) { console.error("Gagal memasang tombol kunci:", err); }
 
@@ -52,10 +52,10 @@ async function boot() {
 
     if (isSupabaseConfigured) {
         const [{ data: guru }, { data: kelas }, { data: mapel }, { data: jadwal, error: eJ }] = await Promise.all([
-            supabaseClient.from("guru").select("id, nama").order("nama"),
-            supabaseClient.from("kelas").select("id, nama_kelas, tingkat"),
-            supabaseClient.from("mapel").select("id, nama_mapel"),
-            supabaseClient.from("jadwal_kbm").select("id, hari, jam_ke, kelas_id, mapel_id, guru_id"),
+            supabaseClient.from("kg_guru").select("id, nama").order("nama"),
+            supabaseClient.from("kg_kelas").select("id, nama_kelas, tingkat"),
+            supabaseClient.from("kg_mapel").select("id, nama_mapel"),
+            supabaseClient.from("kg_jadwal_kbm").select("id, hari, jam_ke, kelas_id, mapel_id, guru_id"),
         ]);
         if (eJ) { laporError("Gagal memuat jadwal", eJ); return; }
         state.guru = guru || []; state.kelas = urutkanKelas(kelas || []); state.mapel = mapel || []; state.jadwal = jadwal || [];
@@ -69,10 +69,10 @@ async function boot() {
 }
 
 async function muatLibur() {
-    const { data, error } = await supabaseClient.from("hari_libur").select("tanggal, keterangan").order("tanggal");
+    const { data, error } = await supabaseClient.from("kg_hari_libur").select("tanggal, keterangan").order("tanggal");
     if (error) {
         // tabel belum dibuat -> beri tahu, tapi rekap tetap jalan tanpa libur
-        laporError("Tabel hari_libur belum ada — jalankan migrasi_hari_libur.sql di Supabase (rekap tetap dihitung tanpa hari libur)", error);
+        laporError("Tabel kg_hari_libur belum ada — jalankan migrasi_hari_libur.sql di Supabase (rekap tetap dihitung tanpa hari libur)", error);
         state.libur = []; return;
     }
     state.libur = data || [];
@@ -85,13 +85,13 @@ async function hitung() {
     if (!state.awal || !state.akhir || state.awal > state.akhir) { laporError("Rentang tanggal tidak valid", { message: "Tanggal awal harus sebelum atau sama dengan tanggal akhir." }); return; }
 
     if (isSupabaseConfigured) {
-        const { data: k, error: eK } = await supabaseClient.from("ketidakhadiran_guru").select("id, jadwal_id, tanggal, guru_id, status").gte("tanggal", state.awal).lte("tanggal", state.akhir);
+        const { data: k, error: eK } = await supabaseClient.from("kg_ketidakhadiran_guru").select("id, jadwal_id, tanggal, guru_id, status").gte("tanggal", state.awal).lte("tanggal", state.akhir);
         if (eK) { laporError("Gagal memuat catatan ketidakhadiran", eK); return; }
         state.ketidakhadiran = k || [];
         const ids = state.ketidakhadiran.map((x) => x.id);
         let pen = [];
         for (let i = 0; i < ids.length; i += 200) { // batasi panjang query
-            const { data, error } = await supabaseClient.from("penugasan_pengganti").select("ketidakhadiran_id, guru_pengganti_id, status_pengganti").in("ketidakhadiran_id", ids.slice(i, i + 200));
+            const { data, error } = await supabaseClient.from("kg_penugasan_pengganti").select("ketidakhadiran_id, guru_pengganti_id, status_pengganti").in("ketidakhadiran_id", ids.slice(i, i + 200));
             if (error) { laporError("Gagal memuat penugasan", error); return; }
             pen = pen.concat(data || []);
         }
@@ -168,7 +168,7 @@ async function tambahLibur() {
     const keterangan = document.getElementById("liburKeterangan").value || null;
     if (!tanggal) return;
     if (isSupabaseConfigured) {
-        const { error } = await supabaseClient.from("hari_libur").upsert({ tanggal, keterangan }, { onConflict: "tanggal" });
+        const { error } = await supabaseClient.from("kg_hari_libur").upsert({ tanggal, keterangan }, { onConflict: "tanggal" });
         if (error) { laporError("Gagal menyimpan hari libur", error); return; }
         await muatLibur();
     } else {
@@ -181,7 +181,7 @@ async function tambahLibur() {
 
 async function hapusLibur(tanggal) {
     if (isSupabaseConfigured) {
-        const { error } = await supabaseClient.from("hari_libur").delete().eq("tanggal", tanggal);
+        const { error } = await supabaseClient.from("kg_hari_libur").delete().eq("tanggal", tanggal);
         if (error) { laporError("Gagal menghapus hari libur", error); return; }
         await muatLibur();
     } else {
